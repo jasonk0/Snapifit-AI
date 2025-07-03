@@ -31,6 +31,7 @@ import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
 import { useAIMemoryServer } from "@/hooks/use-ai-memory-server";
 import { useAIMemory } from "@/hooks/use-ai-memory";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
+import { useUserProfileServer } from "@/hooks/use-user-profile-server";
 import type { AIConfig, ModelConfig } from "@/lib/types";
 import type { OpenAIModel } from "@/lib/openai-client";
 import {
@@ -260,20 +261,16 @@ function SettingsContent() {
   );
 
   // 使用独立的表单状态，从服务端数据初始化
-  const [formData, setFormData] = useState(currentUserProfile);
-  const [aiFormData, setAIFormData] = useState(currentAIConfig);
+  const [formData, setFormData] = useState(currentUserProfile || defaultUserProfile);
+  const [aiFormData, setAIFormData] = useState(currentAIConfig || defaultAIConfig);
 
   // 同步服务端数据到表单状态
   useEffect(() => {
-    if (userProfile) {
-      setFormData(userProfile);
-    }
+    setFormData(userProfile || defaultUserProfile);
   }, [userProfile]);
 
   useEffect(() => {
-    if (aiConfig) {
-      setAIFormData(aiConfig);
-    }
+    setAIFormData(aiConfig || defaultAIConfig);
   }, [aiConfig]);
 
   // 模型列表状态
@@ -285,33 +282,6 @@ function SettingsContent() {
   const [loadingAgentModels, setLoadingAgentModels] = useState(false);
   const [loadingChatModels, setLoadingChatModels] = useState(false);
   const [loadingVisionModels, setLoadingVisionModels] = useState(false);
-
-  // 初始化表单数据
-  useEffect(() => {
-    setFormData(userProfile);
-  }, [userProfile]);
-
-  useEffect(() => {
-    // 确保 currentAIConfig 的所有字段都是有效的 ModelConfig 对象
-    const safeAIConfig = {
-      agentModel: currentAIConfig.agentModel || {
-        name: "gpt-4.1-mini",
-        baseUrl: "https://api.openai.com",
-        apiKey: "",
-      },
-      chatModel: currentAIConfig.chatModel || {
-        name: "gpt-4.1-mini",
-        baseUrl: "https://api.openai.com",
-        apiKey: "",
-      },
-      visionModel: currentAIConfig.visionModel || {
-        name: "gpt-4.1-mini",
-        baseUrl: "https://api.openai.com",
-        apiKey: "",
-      },
-    };
-    setAIFormData(safeAIConfig);
-  }, [currentAIConfig]);
 
   // 处理表单输入变化
   const handleInputChange = useCallback(
@@ -694,10 +664,10 @@ function SettingsContent() {
           const result = await response.json();
           console.log("数据导入结果:", result);
 
-          // 更新本地状态
-          setUserProfile(importedData.userProfile);
+          // 更新服务端状态
+          await saveUserProfileServer(importedData.userProfile);
           if (importedData.aiConfig) {
-            setAIConfig(importedData.aiConfig);
+            await setAIConfig(importedData.aiConfig);
           }
 
           toast({
@@ -721,7 +691,7 @@ function SettingsContent() {
 
       reader.readAsText(file);
     },
-    [setUserProfile, setAIConfig, toast]
+    [saveUserProfileServer, setAIConfig, toast]
   );
 
   // 清空所有数据
@@ -731,8 +701,8 @@ function SettingsContent() {
       await clearAllMemories();
 
       // 重置用户配置和 AI 配置到默认值
-      setUserProfile(defaultUserProfile);
-      setAIConfig(defaultAIConfig);
+      await saveUserProfileServer(defaultUserProfile);
+      await setAIConfig(defaultAIConfig);
 
       toast({
         title: t("data.clearSuccessTitle"),
@@ -746,7 +716,7 @@ function SettingsContent() {
         variant: "destructive",
       });
     }
-  }, [clearAllMemories, setUserProfile, setAIConfig, toast]);
+  }, [clearAllMemories, saveUserProfileServer, setAIConfig, toast]);
 
   // 渲染模型选择器
   const renderModelSelector = useCallback(
@@ -804,46 +774,51 @@ function SettingsContent() {
   );
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 px-4 sm:px-6 max-w-7xl">
-      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
-        {t("title")}
-      </h1>
+    <div className="container mx-auto py-6 sm:py-8 px-4 sm:px-6 max-w-6xl">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+          {t("title")}
+        </h1>
+        <p className="text-muted-foreground text-sm sm:text-base">
+          {t("subtitle")}
+        </p>
+      </div>
 
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto sm:h-10 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-4 h-14 bg-muted/50">
           <TabsTrigger
             value="profile"
-            className="text-xs sm:text-sm py-2 px-1 sm:px-3 min-w-0 flex-1"
+            className="text-sm sm:text-base py-2 px-2 sm:px-4 flex-col sm:flex-row gap-1 sm:gap-2 min-w-0"
           >
-            <span className="truncate">{t("tabs.profile")}</span>
+            <span className="truncate font-medium">{t("tabs.profile")}</span>
           </TabsTrigger>
           <TabsTrigger
             value="goals"
-            className="text-xs sm:text-sm py-2 px-1 sm:px-3 min-w-0 flex-1"
+            className="text-xs sm:text-sm py-3 sm:py-2.5 px-1.5 sm:px-4 min-w-0 flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 transition-all duration-200 touch-manipulation"
           >
-            <span className="truncate">{t("tabs.goals")}</span>
+            <span className="truncate font-medium">{t("tabs.goals")}</span>
           </TabsTrigger>
           <TabsTrigger
             value="ai"
-            className="text-xs sm:text-sm py-2 px-1 sm:px-3 min-w-0 flex-1"
+            className="text-xs sm:text-sm py-3 sm:py-2.5 px-1.5 sm:px-4 min-w-0 flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 transition-all duration-200 touch-manipulation"
           >
-            <span className="truncate">{t("tabs.ai")}</span>
+            <span className="truncate font-medium">{t("tabs.ai")}</span>
           </TabsTrigger>
           <TabsTrigger
             value="data"
-            className="text-xs sm:text-sm py-2 px-1 sm:px-3 min-w-0 flex-1"
+            className="text-xs sm:text-sm py-3 sm:py-2.5 px-1.5 sm:px-4 min-w-0 flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 transition-all duration-200 touch-manipulation"
           >
-            <span className="truncate">{t("tabs.data")}</span>
+            <span className="truncate font-medium">{t("tabs.data")}</span>
           </TabsTrigger>
         </TabsList>
 
         {/* 个人信息 */}
-        <TabsContent value="profile">
-          <Card>
+        <TabsContent value="profile" className="mt-6 focus-visible:outline-none">
+          <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <CardTitle>{t("profile.title")}</CardTitle>
               <CardDescription>{t("profile.description")}</CardDescription>
@@ -1033,8 +1008,8 @@ function SettingsContent() {
         </TabsContent>
 
         {/* 健康目标 */}
-        <TabsContent value="goals">
-          <Card>
+        <TabsContent value="goals" className="mt-6 focus-visible:outline-none">
+          <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <CardTitle>{t("goals.title")}</CardTitle>
               <CardDescription>{t("goals.description")}</CardDescription>
@@ -1193,11 +1168,11 @@ function SettingsContent() {
         </TabsContent>
 
         {/* AI 配置 */}
-        <TabsContent value="ai">
+        <TabsContent value="ai" className="mt-6 focus-visible:outline-none">
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
               {/* 工作模型/Agents模型 */}
-              <Card>
+              <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>{t("ai.agentModel")}</CardTitle>
                   <CardDescription>
@@ -1265,7 +1240,7 @@ function SettingsContent() {
               </Card>
 
               {/* 对话模型 */}
-              <Card>
+              <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>{t("ai.chatModel")}</CardTitle>
                   <CardDescription>
@@ -1331,7 +1306,7 @@ function SettingsContent() {
               </Card>
 
               {/* 视觉模型 */}
-              <Card>
+              <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>{t("ai.visionModel")}</CardTitle>
                   <CardDescription>
@@ -1402,7 +1377,7 @@ function SettingsContent() {
             <Button onClick={handleSaveAIConfig}>{t("ai.saveConfig")}</Button>
 
             {/* AI记忆管理 */}
-            <Card className="mt-6">
+            <Card className="mt-6 border-0 shadow-sm bg-card/50 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle>{t("ai.memoryManagement.title")}</CardTitle>
                 <CardDescription>
@@ -1483,10 +1458,10 @@ function SettingsContent() {
                                 <div className="text-xs text-muted-foreground">
                                   {(editingMemories[expertId] || "").length >
                                     400 && (
-                                    <span className="text-amber-600">
-                                      即将达到上限
-                                    </span>
-                                  )}
+                                      <span className="text-amber-600">
+                                        即将达到上限
+                                      </span>
+                                    )}
                                   {hasUnsavedChanges(expertId) && (
                                     <span className="text-amber-600">
                                       3秒后自动保存
@@ -1607,8 +1582,8 @@ function SettingsContent() {
         </TabsContent>
 
         {/* 数据管理 */}
-        <TabsContent value="data">
-          <Card>
+        <TabsContent value="data" className="mt-6 focus-visible:outline-none">
+          <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <CardTitle>{t("data.title")}</CardTitle>
               <CardDescription>{t("data.description")}</CardDescription>

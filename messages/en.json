@@ -511,6 +511,7 @@
   },
   "settings": {
     "title": "Profile & Settings",
+    "subtitle": "Manage your personal information, health goals, and AI configuration",
     "common": {
       "save": "Save",
       "cancel": "Cancel",

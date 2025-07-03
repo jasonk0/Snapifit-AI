@@ -511,7 +511,7 @@ export default function Dashboard({
                 // 使用AI分析的因素，如果AI没有提供则使用本地识别的
                 enhancementFactors:
                   tefResult.enhancementFactors &&
-                  tefResult.enhancementFactors.length > 0
+                    tefResult.enhancementFactors.length > 0
                     ? tefResult.enhancementFactors
                     : localTEFAnalysis.enhancementFactors,
                 analysisTimestamp:
@@ -1309,8 +1309,8 @@ export default function Dashboard({
                             {exportReminder.lastExportDate === null
                               ? t("ui.neverExported")
                               : t("ui.exportReminder", {
-                                  days: exportReminder.daysSinceLastExport,
-                                })}
+                                days: exportReminder.daysSinceLastExport,
+                              })}
                           </span>
                           <Clock className="h-3 w-3 ml-1" />
                         </div>
@@ -1587,9 +1587,8 @@ export default function Dashboard({
                         <UploadCloud className="mr-2 h-5 w-5" />
                         {isCompressing
                           ? t("buttons.imageProcessing")
-                          : `${t("buttons.uploadImages")} (${
-                              uploadedImages.length
-                            }/5)`}
+                          : `${t("buttons.uploadImages")} (${uploadedImages.length
+                          }/5)`}
                       </Button>
                       {uploadedImages.length > 0 && (
                         <Button

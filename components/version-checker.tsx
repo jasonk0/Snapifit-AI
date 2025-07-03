@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RefreshCw, Info } from "lucide-react";
-import { checkForUpdates, forceRefresh, getVersionInfo } from "@/lib/version";
+import { checkForUpdates, forceRefresh, getVersionInfo, dismissUpdate } from "@/lib/version";
 import { useTranslations } from "next-intl";
 
 export function VersionChecker() {
@@ -33,6 +33,7 @@ export function VersionChecker() {
   };
 
   const handleDismiss = () => {
+    dismissUpdate();
     setShowUpdateDialog(false);
   };
 
@@ -48,7 +49,7 @@ export function VersionChecker() {
             检测到应用有新版本，建议刷新页面以获得最佳体验。
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
           <Info className="h-4 w-4 text-muted-foreground" />
           <div className="text-sm text-muted-foreground">

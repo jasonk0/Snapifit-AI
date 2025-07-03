@@ -494,6 +494,7 @@
   },
   "settings": {
     "title": "我的档案与设置",
+    "subtitle": "管理您的个人信息、健康目标和AI配置",
     "common": {
       "save": "保存",
       "cancel": "取消",
