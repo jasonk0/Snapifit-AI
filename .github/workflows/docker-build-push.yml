@@ -66,6 +66,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            APP_VERSION=1.0.0
           platforms: linux/amd64
           provenance: false
           sbom: false

@@ -39,12 +39,16 @@ COPY . .
 # 使用 Docker 专用的 Next.js 配置
 RUN cp next.config.docker.mjs next.config.mjs
 
+# 设置构建时间参数
+ARG BUILD_TIME
+ARG APP_VERSION=1.0.0
+
 # 设置环境变量
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV SKIP_ENV_VALIDATION=1
-ENV NEXT_PUBLIC_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-ENV NEXT_PUBLIC_APP_VERSION=1.0.0
+ENV NEXT_PUBLIC_BUILD_TIME=${BUILD_TIME}
+ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
 
 # 启用 pnpm
 RUN corepack enable pnpm

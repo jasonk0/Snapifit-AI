@@ -38,7 +38,10 @@ jobs:
       - name: 尝试完整构建（调试模式）
         run: |
           echo "开始完整构建测试..."
-          docker build --progress=plain --no-cache -f Dockerfile -t full-test . || true
+          docker build --progress=plain --no-cache -f Dockerfile -t full-test \
+            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg APP_VERSION=1.0.0 \
+            . || true
           echo "完整构建完成"
 
       - name: 检查构建环境
