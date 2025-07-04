@@ -807,16 +807,32 @@ export default function Dashboard({
 
     if (!checkAIConfig()) return;
 
+    // 检查认证状态
+    if (!isAuthenticated) {
+      toast({
+        title: "认证失败",
+        description: "请先登录后再使用此功能",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       let result;
       const effectiveWeight = dailyLog.weight || userProfile.weight;
 
       if (uploadedImages.length > 0) {
+        const token = localStorage.getItem("auth_token");
+        if (!token) {
+          throw new Error("用户未登录，请重新登录");
+        }
+
         const formData = new FormData();
         formData.append("text", inputText);
         formData.append("type", activeTab);
         formData.append("userWeight", effectiveWeight.toString());
+        formData.append("logId", dailyLog.date);
         formData.append("aiConfig", JSON.stringify(aiConfig));
         uploadedImages.forEach((img, index) => {
           formData.append(`image${index}`, img.compressedFile || img.file);
@@ -824,6 +840,9 @@ export default function Dashboard({
 
         const response = await fetch("/api/openai/parse-with-images", {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         });
 
@@ -835,16 +854,24 @@ export default function Dashboard({
         }
         result = await response.json();
       } else {
+        const token = localStorage.getItem("auth_token");
+        console.log("Token check:", token ? "存在" : "不存在");
+        if (!token) {
+          throw new Error("用户未登录，请重新登录");
+        }
+
         const response = await fetch("/api/openai/parse", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-ai-config": JSON.stringify(aiConfig),
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             text: inputText,
             type: activeTab,
             userWeight: effectiveWeight,
+            logId: dailyLog.date,
           }),
         });
 
@@ -852,7 +879,13 @@ export default function Dashboard({
           const errorData = await response
             .json()
             .catch(() => ({ message: "解析失败" }));
-          throw new Error(errorData.message || "解析失败");
+          console.error("API Error:", response.status, errorData);
+          if (response.status === 401) {
+            throw new Error("认证失败，请重新登录");
+          }
+          throw new Error(
+            errorData.message || `解析失败，状态码: ${response.status}`
+          );
         }
         result = await response.json();
       }
@@ -861,29 +894,13 @@ export default function Dashboard({
 
       if (activeTab === "food" && result.food) {
         updatedLog.foodEntries = [...updatedLog.foodEntries, ...result.food];
-        // summary现在由服务端动态计算，无需手动重新计算
-
-        // 保存新添加的食物条目到服务器
-        try {
-          await saveFoodEntries(updatedLog.date, result.food);
-        } catch (error) {
-          console.error("保存食物条目失败：", error);
-          // 即使保存失败，也继续更新本地状态
-        }
+        // 记录已在后端保存，无需手动保存
       } else if (activeTab === "exercise" && result.exercise) {
         updatedLog.exerciseEntries = [
           ...updatedLog.exerciseEntries,
           ...result.exercise,
         ];
-        // summary现在由服务端动态计算，无需手动重新计算
-
-        // 保存新添加的运动条目到服务器
-        try {
-          await saveExerciseEntries(updatedLog.date, result.exercise);
-        } catch (error) {
-          console.error("保存运动条目失败：", error);
-          // 即使保存失败，也继续更新本地状态
-        }
+        // 记录已在后端保存，无需手动保存
       }
 
       setDailyLog(updatedLog);
@@ -892,6 +909,7 @@ export default function Dashboard({
           console.error("保存日志数据失败：", error);
         }
       );
+      //  TODO
       // 触发图表刷新
       setChartRefreshTrigger((prev) => prev + 1);
       // 刷新日期记录状态
@@ -948,7 +966,7 @@ export default function Dashboard({
       }
 
       updatedLog.foodEntries = updatedLog.foodEntries.filter(
-        (entry) => entry.log_id !== id
+        (entry) => entry.id !== id
       );
     } else {
       // 先从服务器删除
@@ -965,7 +983,7 @@ export default function Dashboard({
       }
 
       updatedLog.exerciseEntries = updatedLog.exerciseEntries.filter(
-        (entry) => entry.log_id !== id
+        (entry) => entry.id !== id
       );
     }
 
@@ -1005,10 +1023,11 @@ export default function Dashboard({
     if (type === "food") {
       // 先更新服务器
       try {
-        await updateFoodEntry(
-          (updatedEntry as FoodEntry).log_id,
-          updatedEntry as FoodEntry
-        );
+        const foodEntry = updatedEntry as FoodEntry;
+        if (!foodEntry.id) {
+          throw new Error("食物条目缺少 ID");
+        }
+        await updateFoodEntry(foodEntry.id, foodEntry);
       } catch (error) {
         console.error("更新食物条目失败：", error);
         toast({
@@ -1020,17 +1039,18 @@ export default function Dashboard({
       }
 
       updatedLog.foodEntries = updatedLog.foodEntries.map((entry) =>
-        entry.log_id === (updatedEntry as FoodEntry).log_id
+        entry.id === (updatedEntry as FoodEntry).id
           ? (updatedEntry as FoodEntry)
           : entry
       );
     } else {
       // 先更新服务器
       try {
-        await updateExerciseEntry(
-          (updatedEntry as ExerciseEntry).log_id,
-          updatedEntry as ExerciseEntry
-        );
+        const exerciseEntry = updatedEntry as ExerciseEntry;
+        if (!exerciseEntry.id) {
+          throw new Error("运动条目缺少 ID");
+        }
+        await updateExerciseEntry(exerciseEntry.id, exerciseEntry);
       } catch (error) {
         console.error("更新运动条目失败：", error);
         toast({
@@ -1042,7 +1062,7 @@ export default function Dashboard({
       }
 
       updatedLog.exerciseEntries = updatedLog.exerciseEntries.map((entry) =>
-        entry.log_id === (updatedEntry as ExerciseEntry).log_id
+        entry.id === (updatedEntry as ExerciseEntry).id
           ? (updatedEntry as ExerciseEntry)
           : entry
       );
@@ -1702,9 +1722,9 @@ export default function Dashboard({
                   <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                     {dailyLog.foodEntries.map((entry) => (
                       <FoodEntryCard
-                        key={entry.log_id}
+                        key={entry.id || entry.log_id}
                         entry={entry}
-                        onDelete={() => handleDeleteEntry(entry.log_id, "food")}
+                        onDelete={() => handleDeleteEntry(entry.id!, "food")}
                         onUpdate={(updated) =>
                           handleUpdateEntry(updated, "food")
                         }
@@ -1749,10 +1769,10 @@ export default function Dashboard({
                   <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                     {dailyLog.exerciseEntries.map((entry) => (
                       <ExerciseEntryCard
-                        key={entry.log_id}
+                        key={entry.id || entry.log_id}
                         entry={entry}
                         onDelete={() =>
-                          handleDeleteEntry(entry.log_id, "exercise")
+                          handleDeleteEntry(entry.id!, "exercise")
                         }
                         onUpdate={(updated) =>
                           handleUpdateEntry(updated, "exercise")

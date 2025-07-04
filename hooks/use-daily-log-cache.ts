@@ -44,7 +44,8 @@ export function useDailyLogCache(): DailyLogCacheHook {
     foodEntries:
       log.foodEntries?.map((entry: any) => ({
         ...entry,
-        log_id: entry.id,
+        id: entry.id, // 保留数据库的唯一标识符
+        log_id: entry.logId, // 使用正确的 logId 字段（日期字符串）
         food_name: entry.foodName,
         consumed_grams: entry.consumedGrams,
         meal_type: entry.mealType,
@@ -58,7 +59,8 @@ export function useDailyLogCache(): DailyLogCacheHook {
     exerciseEntries:
       log.exerciseEntries?.map((entry: any) => ({
         ...entry,
-        log_id: entry.id,
+        id: entry.id, // 保留数据库的唯一标识符
+        log_id: entry.logId, // 使用正确的 logId 字段（日期字符串）
         exercise_name: entry.exerciseName,
         exercise_type: entry.exerciseType,
         duration_minutes: entry.durationMinutes,

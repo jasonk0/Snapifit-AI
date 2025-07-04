@@ -1,51 +1,71 @@
-import { OpenAICompatibleClient } from "@/lib/openai-client"
-import { v4 as uuidv4 } from "uuid"
+import { NextResponse } from "next/server";
+import { OpenAICompatibleClient } from "@/lib/openai-client";
+import { v4 as uuidv4 } from "uuid";
+import { withAuth } from "@/lib/auth-middleware";
+import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
+export const POST = withAuth(async (request) => {
   try {
-    const formData = await req.formData()
-    const text = (formData.get("text") as string) || ""
-    const type = formData.get("type") as string
-    const userWeight = formData.get("userWeight") as string
-    const aiConfigStr = formData.get("aiConfig") as string
+    const userId = request.userId!;
+    const formData = await request.formData();
+    const text = (formData.get("text") as string) || "";
+    const type = formData.get("type") as string;
+    const userWeight = formData.get("userWeight") as string;
+    const logId = formData.get("logId") as string;
+    const aiConfigStr = formData.get("aiConfig") as string;
 
     // 收集所有图片
-    const images: File[] = []
+    const images: File[] = [];
     for (let i = 0; i < 5; i++) {
-      const image = formData.get(`image${i}`) as File
+      const image = formData.get(`image${i}`) as File;
       if (image) {
-        images.push(image)
+        images.push(image);
       }
     }
 
     if (images.length === 0) {
-      return Response.json({ error: "No images provided" }, { status: 400 })
+      return NextResponse.json(
+        { error: "No images provided" },
+        { status: 400 }
+      );
+    }
+
+    if (!logId) {
+      return NextResponse.json({ error: "logId is required" }, { status: 400 });
     }
 
     if (!aiConfigStr) {
-      return Response.json({ error: "AI configuration not found" }, { status: 400 })
+      return NextResponse.json(
+        { error: "AI configuration not found" },
+        { status: 400 }
+      );
     }
 
-    const aiConfig = JSON.parse(aiConfigStr)
-    const modelConfig = aiConfig.visionModel
+    const aiConfig = JSON.parse(aiConfigStr);
+    const modelConfig = aiConfig.visionModel;
 
     // 创建客户端
-    const client = new OpenAICompatibleClient(modelConfig.baseUrl, modelConfig.apiKey)
+    const client = new OpenAICompatibleClient(
+      modelConfig.baseUrl,
+      modelConfig.apiKey
+    );
 
     // 将图片转换为 base64
     const imageDataURIs = await Promise.all(
       images.map(async (image) => {
-        const imageBuffer = await image.arrayBuffer()
-        const imageBase64 = Buffer.from(imageBuffer).toString("base64")
-        return `data:${image.type};base64,${imageBase64}`
-      }),
-    )
+        const imageBuffer = await image.arrayBuffer();
+        const imageBase64 = Buffer.from(imageBuffer).toString("base64");
+        return `data:${image.type};base64,${imageBase64}`;
+      })
+    );
 
     // 根据类型选择不同的提示词和解析逻辑
     if (type === "food") {
       // 食物图片解析提示词
       const prompt = `
-        请分析${images.length > 1 ? "这些" : "这张"}食物图片${text ? "和文本描述" : ""}，识别图中的食物，并将其转换为结构化的 JSON 格式。
+        请分析${images.length > 1 ? "这些" : "这张"}食物图片${
+        text ? "和文本描述" : ""
+      }，识别图中的食物，并将其转换为结构化的 JSON 格式。
         ${text ? `用户文本描述: "${text}"` : ""}
         
         请直接输出 JSON，不要有额外文本。如果无法确定数值，请给出合理估算，并在相应字段标记 is_estimated: true。
@@ -87,30 +107,73 @@ export async function POST(req: Request) {
             }
           ]
         }
-      `
+      `;
 
       const { text: resultText } = await client.generateText({
         model: modelConfig.name,
         prompt,
         images: imageDataURIs,
         response_format: { type: "json_object" },
-      })
+      });
 
       // 解析结果
-      const result = JSON.parse(resultText)
+      const result = JSON.parse(resultText);
 
-      // 为每个食物项添加唯一 ID
+      // 为每个食物项添加唯一 ID 并保存到数据库
       if (result.food && Array.isArray(result.food)) {
-        result.food.forEach((item: any) => {
-          item.log_id = uuidv4()
-        })
+        const savedFoodEntries = [];
+
+        for (const item of result.food) {
+          const id = uuidv4();
+          item.log_id = id;
+
+          // 保存到数据库
+          try {
+            const savedEntry = await prisma.foodEntry.create({
+              data: {
+                id,
+                userId,
+                logId,
+                foodName: item.food_name,
+                consumedGrams: item.consumed_grams,
+                mealType: item.meal_type,
+                timePeriod: item.time_period,
+                nutritionalInfoPer100g: JSON.stringify(
+                  item.nutritional_info_per_100g
+                ),
+                totalNutritionalInfoConsumed: JSON.stringify(
+                  item.total_nutritional_info_consumed
+                ),
+                isEstimated: item.is_estimated || false,
+                timestamp: new Date().toISOString(),
+              },
+            });
+
+            // 转换为前端格式
+            savedFoodEntries.push({
+              ...item,
+              id: savedEntry.id,
+            });
+          } catch (error) {
+            console.error("Failed to save food entry:", error);
+            // 如果保存失败，仍然返回解析结果，但标记为未保存
+            savedFoodEntries.push({
+              ...item,
+              _saveError: true,
+            });
+          }
+        }
+
+        result.food = savedFoodEntries;
       }
 
-      return Response.json(result)
+      return NextResponse.json(result);
     } else if (type === "exercise") {
       // 运动图片解析提示词
       const prompt = `
-        请分析${images.length > 1 ? "这些" : "这张"}运动相关的图片${text ? "和文本描述" : ""}，识别图中的运动类型，并将其转换为结构化的 JSON 格式。
+        请分析${images.length > 1 ? "这些" : "这张"}运动相关的图片${
+        text ? "和文本描述" : ""
+      }，识别图中的运动类型，并将其转换为结构化的 JSON 格式。
         ${text ? `用户文本描述: "${text}"` : ""}
         用户体重: ${userWeight || 70} kg
         
@@ -148,34 +211,81 @@ export async function POST(req: Request) {
             }
           ]
         }
-      `
+      `;
 
       const { text: resultText } = await client.generateText({
         model: modelConfig.name,
         prompt,
         images: imageDataURIs,
         response_format: { type: "json_object" },
-      })
+      });
 
       // 解析结果
-      const result = JSON.parse(resultText)
+      const result = JSON.parse(resultText);
 
-      // 为每个运动项添加唯一 ID
+      // 为每个运动项添加唯一 ID 并保存到数据库
       if (result.exercise && Array.isArray(result.exercise)) {
-        result.exercise.forEach((item: any) => {
-          item.log_id = uuidv4()
-        })
+        const savedExerciseEntries = [];
+
+        for (const item of result.exercise) {
+          const id = uuidv4();
+          item.log_id = id;
+
+          // 保存到数据库
+          try {
+            const savedEntry = await prisma.exerciseEntry.create({
+              data: {
+                id,
+                userId,
+                logId,
+                exerciseName: item.exercise_name,
+                exerciseType: item.exercise_type,
+                durationMinutes: item.duration_minutes,
+                distanceKm: item.distance_km,
+                sets: item.sets,
+                reps: item.reps,
+                weightKg: item.weight_kg,
+                estimatedMets: item.estimated_mets,
+                userWeight: item.user_weight || userWeight,
+                caloriesBurnedEstimated: item.calories_burned_estimated,
+                muscleGroups: item.muscle_groups
+                  ? JSON.stringify(item.muscle_groups)
+                  : null,
+                isEstimated: item.is_estimated || false,
+                timestamp: new Date().toISOString(),
+              },
+            });
+
+            // 转换为前端格式
+            savedExerciseEntries.push({
+              ...item,
+              id: savedEntry.id,
+            });
+          } catch (error) {
+            console.error("Failed to save exercise entry:", error);
+            // 如果保存失败，仍然返回解析结果，但标记为未保存
+            savedExerciseEntries.push({
+              ...item,
+              _saveError: true,
+            });
+          }
+        }
+
+        result.exercise = savedExerciseEntries;
       }
 
-      return Response.json(result)
+      return NextResponse.json(result);
     } else {
-      return Response.json({ error: "Invalid type" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Error:", error)
-    return Response.json(
-      { error: "Failed to process request", details: error instanceof Error ? error.message : String(error) },
-      { status: 500 },
-    )
+    console.error("Error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to process request",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
-}
+});

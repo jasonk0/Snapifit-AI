@@ -29,7 +29,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
 import { useAIMemoryServer } from "@/hooks/use-ai-memory-server";
-import { useAIMemory } from "@/hooks/use-ai-memory";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
 import { useUserProfileServer } from "@/hooks/use-user-profile-server";
 import type { AIConfig, ModelConfig } from "@/lib/types";
@@ -122,9 +121,14 @@ function SettingsContent() {
   });
 
   const { getAllDailyLogs } = useDailyLogCache();
-  const { getAllMemories: getAllServerMemories } = useAIMemoryServer();
-  const { memories, updateMemory, clearMemory, clearAllMemories } =
-    useAIMemory();
+  const {
+    memories,
+    updateMemory,
+    clearMemory,
+    clearAllMemories,
+    loadMemories,
+    getAllMemories: getAllServerMemories,
+  } = useAIMemoryServer();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 记忆编辑状态管理
@@ -142,7 +146,9 @@ function SettingsContent() {
   useEffect(() => {
     const initialEditingState: Record<string, string> = {};
     Object.entries(memories).forEach(([expertId, memory]) => {
-      initialEditingState[expertId] = memory.content;
+      // 服务器端的记忆结构不同，需要将结构化数据转换为文本
+      const content = memory.keyInsights?.join("\n") || "";
+      initialEditingState[expertId] = content;
     });
     setEditingMemories(initialEditingState);
   }, [memories]);
@@ -241,9 +247,12 @@ function SettingsContent() {
       try {
         setSavingMemories((prev) => ({ ...prev, [expertId]: true }));
 
+        // 将文本内容转换为结构化数据
+        const insights = content.split("\n").filter((line) => line.trim());
+
         await updateMemory({
           expertId,
-          newContent: content,
+          keyInsights: insights,
           reason: "用户手动保存",
         });
 
@@ -1420,7 +1429,7 @@ function SettingsContent() {
                                 {getExpertName(expertId)}
                               </CardTitle>
                               <div className="text-xs text-muted-foreground">
-                                {memory.content.length}/500
+                                {(editingMemories[expertId] || "").length}/500
                               </div>
                             </div>
                             <div className="text-xs text-muted-foreground">

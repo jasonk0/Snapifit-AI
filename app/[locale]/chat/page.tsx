@@ -13,10 +13,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
-import { useAIMemory } from "@/hooks/use-ai-memory";
+import { useAIMemoryServer } from "@/hooks/use-ai-memory-server";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { EnhancedMessageRenderer } from "@/components/enhanced-message-renderer";
+import { LocalStorageDebug } from "@/components/debug/localStorage-debug";
 import type { AIConfig, AIMemoryUpdateRequest } from "@/lib/types";
 import { format } from "date-fns";
 import {
@@ -336,6 +337,7 @@ export default function ChatPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [showExpertPanel, setShowExpertPanel] = useState(false);
   const [showExpertDropdown, setShowExpertDropdown] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const [userProfile] = useLocalStorage("userProfile", {});
 
@@ -365,15 +367,36 @@ export default function ChatPage() {
   const { getDailyLog, getBatchDailyLogs } = useDailyLogCache();
   const [todayLog, setTodayLog] = useState(null);
 
-  // AI记忆管理
-  const { memories, getMemory, updateMemory } = useAIMemory();
+  // AI记忆管理 - 使用服务器端存储
+  const { memories, getMemory, updateMemory, loadMemories } =
+    useAIMemoryServer();
   const [pendingMemoryUpdate, setPendingMemoryUpdate] =
     useState<AIMemoryUpdateRequest | null>(null);
 
   // 为每个专家使用独立的聊天记录
-  const [allExpertMessages, setAllExpertMessages] = useLocalStorage<
-    Record<string, Message[]>
-  >("expertChatMessages", {});
+  const [
+    allExpertMessages,
+    setAllExpertMessages,
+    { error: storageError, isLoading: storageLoading },
+  ] = useLocalStorage<Record<string, Message[]>>("expertChatMessages", {});
+
+  // 加载AI记忆数据
+  useEffect(() => {
+    loadMemories().catch((error) => {
+      console.error("Failed to load AI memories:", error);
+    });
+  }, [loadMemories]);
+
+  // 调试信息：显示存储状态
+  useEffect(() => {
+    console.log("💬 Chat storage status:", {
+      storageLoading,
+      storageError,
+      allExpertMessagesKeys: Object.keys(allExpertMessages),
+      selectedExpert,
+      currentExpertMessageCount: allExpertMessages[selectedExpert]?.length || 0,
+    });
+  }, [storageLoading, storageError, allExpertMessages, selectedExpert]);
 
   // 检查AI配置是否完整
   const checkAIConfig = () => {
@@ -396,9 +419,12 @@ export default function ChatPage() {
     reason?: string
   ) => {
     try {
+      // 将文本内容转换为结构化数据
+      const insights = newContent.split("\n").filter((line) => line.trim());
+
       await updateMemory({
         expertId: selectedExpert,
-        newContent,
+        keyInsights: insights,
         reason,
       });
 
@@ -579,23 +605,46 @@ export default function ChatPage() {
 
   // 当切换专家时，加载对应的消息记录
   useEffect(() => {
+    if (storageLoading) {
+      console.log("💬 Waiting for storage to load...");
+      return;
+    }
+
+    console.log(`💬 Loading messages for expert: ${selectedExpert}`);
     isLoadingMessagesRef.current = true;
+
     const expertMessages = allExpertMessages[selectedExpert] || [];
+    console.log(
+      `💬 Found ${expertMessages.length} messages for expert ${selectedExpert}`
+    );
+
     setMessages(expertMessages);
+
     // 使用 setTimeout 确保 setMessages 完成后再重置标志
     setTimeout(() => {
       isLoadingMessagesRef.current = false;
+      console.log(`💬 Finished loading messages for expert ${selectedExpert}`);
     }, 0);
-  }, [selectedExpert, allExpertMessages, setMessages]);
+  }, [selectedExpert, allExpertMessages, setMessages, storageLoading]);
 
   // 保存当前专家的消息到 localStorage (但避免在加载消息时触发)
   useEffect(() => {
-    if (messages.length > 0 && !isLoadingMessagesRef.current) {
+    if (storageLoading || isLoadingMessagesRef.current) {
+      console.log("💬 Skipping save - storage loading or messages loading");
+      return;
+    }
+
+    if (messages.length > 0) {
+      console.log(
+        `💬 Saving ${messages.length} messages for expert ${selectedExpert}`
+      );
       const newMessages = { ...allExpertMessages };
       newMessages[selectedExpert] = messages as Message[];
       setAllExpertMessages(newMessages);
+    } else {
+      console.log(`💬 No messages to save for expert ${selectedExpert}`);
     }
-  }, [messages, selectedExpert, setAllExpertMessages]);
+  }, [messages, selectedExpert, setAllExpertMessages, storageLoading]);
 
   // 处理专家选择
   const handleExpertSelect = (expertId: string) => {
@@ -881,9 +930,14 @@ export default function ChatPage() {
                   {t("configureAI")}
                 </div>
               )}
+              {isClient && storageError && (
+                <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 p-2 rounded mt-2">
+                  存储错误: {storageError}
+                </div>
+              )}
               {isClient && error && (
                 <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 p-2 rounded mt-2">
-                  错误: {error.message}
+                  聊天错误: {error.message}
                 </div>
               )}
             </CardHeader>
@@ -919,6 +973,44 @@ export default function ChatPage() {
                         isMobile ? "py-4 px-2" : "py-8 px-4"
                       } max-w-2xl mx-auto`}
                     >
+                      {/* 调试信息 */}
+                      {process.env.NODE_ENV === "development" && (
+                        <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
+                          <div className="font-semibold mb-2">
+                            🔍 聊天记录调试信息:
+                          </div>
+                          <div>存储加载中: {storageLoading ? "是" : "否"}</div>
+                          <div>存储错误: {storageError || "无"}</div>
+                          <div>当前专家: {selectedExpert}</div>
+                          <div>
+                            所有专家消息数:{" "}
+                            {JSON.stringify(
+                              Object.keys(allExpertMessages).reduce(
+                                (acc, key) => {
+                                  acc[key] =
+                                    allExpertMessages[key]?.length || 0;
+                                  return acc;
+                                },
+                                {} as Record<string, number>
+                              )
+                            )}
+                          </div>
+                          <div>
+                            当前专家消息数:{" "}
+                            {allExpertMessages[selectedExpert]?.length || 0}
+                          </div>
+                          <div>
+                            localStorage 大小:{" "}
+                            {typeof window !== "undefined"
+                              ? `${(
+                                  JSON.stringify(allExpertMessages).length /
+                                  1024
+                                ).toFixed(1)} KB`
+                              : "N/A"}
+                          </div>
+                        </div>
+                      )}
+
                       {/* 专家头像和标题 */}
                       <div className="text-center mb-6">
                         <div
@@ -1125,6 +1217,25 @@ export default function ChatPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* 开发模式调试面板 */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDebugPanel(!showDebugPanel)}
+              className="mb-2"
+            >
+              🔍 调试
+            </Button>
+            {showDebugPanel && (
+              <div className="w-96 max-h-96 overflow-auto">
+                <LocalStorageDebug />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </AuthGuard>
   );

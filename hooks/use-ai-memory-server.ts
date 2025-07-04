@@ -12,6 +12,7 @@ interface AIMemoryServerHook {
   clearMemory: (expertId: string) => Promise<void>;
   clearAllMemories: () => Promise<void>;
   loadMemories: () => Promise<void>;
+  getAllMemories: () => Promise<AIMemory[]>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -164,6 +165,40 @@ export function useAIMemoryServer(): AIMemoryServerHook {
     }
   }, [updateData]);
 
+  // 获取所有记忆（用于导出等功能）
+  const getAllMemories = useCallback(async (): Promise<AIMemory[]> => {
+    try {
+      const response = await getData("/api/db/ai-memory");
+      const memoriesArray: AIMemory[] = [];
+
+      if (response.aiMemories) {
+        response.aiMemories.forEach((memory: any) => {
+          memoriesArray.push({
+            expertId: memory.expertId,
+            conversationCount: memory.conversationCount,
+            lastUpdated: memory.lastUpdated,
+            keyInsights: memory.keyInsights
+              ? JSON.parse(memory.keyInsights)
+              : [],
+            userPreferences: memory.userPreferences
+              ? JSON.parse(memory.userPreferences)
+              : {},
+            healthPatterns: memory.healthPatterns
+              ? JSON.parse(memory.healthPatterns)
+              : [],
+            goals: memory.goals ? JSON.parse(memory.goals) : [],
+            concerns: memory.concerns ? JSON.parse(memory.concerns) : [],
+          });
+        });
+      }
+
+      return memoriesArray;
+    } catch (err) {
+      console.error("Failed to get all memories:", err);
+      throw err;
+    }
+  }, [getData]);
+
   // 初始加载 - 等待认证完成后再加载
   useEffect(() => {
     // 只有在认证完成且用户已登录时才加载记忆
@@ -179,6 +214,7 @@ export function useAIMemoryServer(): AIMemoryServerHook {
     clearMemory,
     clearAllMemories,
     loadMemories,
+    getAllMemories,
     isLoading,
     error,
   };
