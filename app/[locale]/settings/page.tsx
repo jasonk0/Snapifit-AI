@@ -734,54 +734,50 @@ function SettingsContent() {
       const modelConfig = aiFormData[modelType];
 
       return (
-        <AuthGuard>
-          <div className="flex space-x-2 items-end">
-            {models.length > 0 ? (
-              <div className="flex-1">
-                <Select
-                  value={modelConfig.name}
-                  onValueChange={(value) =>
-                    handleAIConfigChange(modelType, "name", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("ai.selectModel")} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    {models.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        {model.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <Input
-                className="flex-1"
+        <div className="flex space-x-2 items-end">
+          {models.length > 0 ? (
+            <div className="flex-1">
+              <Select
                 value={modelConfig.name}
-                onChange={(e) =>
-                  handleAIConfigChange(modelType, "name", e.target.value)
+                onValueChange={(value) =>
+                  handleAIConfigChange(modelType, "name", value)
                 }
-                placeholder={t("ai.modelNamePlaceholder")}
-              />
-            )}
-            <Button
-              variant="outline"
-              onClick={() => fetchModels(modelType)}
-              disabled={
-                isLoading || !modelConfig.baseUrl || !modelConfig.apiKey
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("ai.selectModel")} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {models.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <Input
+              className="flex-1"
+              value={modelConfig.name}
+              onChange={(e) =>
+                handleAIConfigChange(modelType, "name", e.target.value)
               }
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              <span className="ml-2">{t("ai.fetchModels")}</span>
-            </Button>
-          </div>
-        </AuthGuard>
+              placeholder={t("ai.modelNamePlaceholder")}
+            />
+          )}
+          <Button
+            variant="outline"
+            onClick={() => fetchModels(modelType)}
+            disabled={isLoading || !modelConfig.baseUrl || !modelConfig.apiKey}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            <span className="ml-2">{t("ai.fetchModels")}</span>
+          </Button>
+        </div>
       );
     },
     [aiFormData, handleAIConfigChange, fetchModels]
@@ -1711,19 +1707,21 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="container mx-auto py-6 max-w-8xl">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">加载设置...</p>
+    <AuthGuard>
+      <Suspense
+        fallback={
+          <div className="container mx-auto py-6 max-w-8xl">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">加载设置...</p>
+              </div>
             </div>
           </div>
-        </div>
-      }
-    >
-      <SettingsContent />
-    </Suspense>
+        }
+      >
+        <SettingsContent />
+      </Suspense>
+    </AuthGuard>
   );
 }
