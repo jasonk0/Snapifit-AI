@@ -1,18 +1,15 @@
-"use client"
+"use client";
 
-import { ReactNode } from 'react'
-import { AuthContext, useAuthProvider } from '@/hooks/use-auth'
+import { ReactNode } from "react";
+import { AuthContext, useAuthProvider } from "@/hooks/use-auth";
+import { AuthGuard } from "./auth-guard";
 
 interface AuthProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const auth = useAuthProvider()
+  const auth = useAuthProvider();
 
-  return (
-    <AuthContext.Provider value={auth}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }

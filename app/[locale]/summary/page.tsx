@@ -42,6 +42,7 @@ import {
 import Link from "next/link";
 import { FoodEntryCard } from "@/components/food-entry-card";
 import { ExerciseEntryCard } from "@/components/exercise-entry-card";
+import { AuthGuard } from "@/components/auth-guard";
 
 const defaultUserProfile: UserProfile = {
   weight: 70,
@@ -1184,361 +1185,367 @@ function SummaryPageContent({
   }
 
   return (
-    <div
-      ref={summaryContentRef}
-      className="container mx-auto px-4 py-8 max-w-4xl"
-      data-screenshot="true"
-    >
-      {/* 页面头部 */}
-      <div className="mb-8">
-        {/* 第一行：返回按钮和标题 */}
-        {/* 第一行：返回按钮 */}
-        <div className="flex items-center justify-between mb-6">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="no-screenshot">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              {t("backToHome")}
-            </Button>
-          </Link>
-        </div>
-
-        {/* 第二行：标题区域 - 居中 */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold mb-2">{t("title")}</h1>
-          <p className="text-muted-foreground text-lg">{t("description")}</p>
-        </div>
-
-        {/* 第三行：日期和操作按钮 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm text-muted-foreground">{t("date")}:</p>
-            <p className="text-lg font-medium">
-              {format(selectedDate, "PPP (eeee)", { locale: currentLocale })}
-            </p>
+    <AuthGuard>
+      <div
+        ref={summaryContentRef}
+        className="container mx-auto px-4 py-8 max-w-4xl"
+        data-screenshot="true"
+      >
+        {/* 页面头部 */}
+        <div className="mb-8">
+          {/* 第一行：返回按钮和标题 */}
+          {/* 第一行：返回按钮 */}
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="no-screenshot">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                {t("backToHome")}
+              </Button>
+            </Link>
           </div>
-          <Button
-            onClick={handleCapture}
-            disabled={isCapturing}
-            variant="outline"
-            size="sm"
-            className="flex items-center space-x-2 no-screenshot"
-          >
-            {isCapturing ? (
-              <>
-                <Download className="h-4 w-4 animate-spin" />
-                <span>{t("screenshot.capturing")}</span>
-              </>
-            ) : (
-              <>
-                <Camera className="h-4 w-4" />
-                <span>{t("screenshot.capture")}</span>
-              </>
-            )}
-          </Button>
+
+          {/* 第二行：标题区域 - 居中 */}
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold mb-2">{t("title")}</h1>
+            <p className="text-muted-foreground text-lg">{t("description")}</p>
+          </div>
+
+          {/* 第三行：日期和操作按钮 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <p className="text-sm text-muted-foreground">{t("date")}:</p>
+              <p className="text-lg font-medium">
+                {format(selectedDate, "PPP (eeee)", { locale: currentLocale })}
+              </p>
+            </div>
+            <Button
+              onClick={handleCapture}
+              disabled={isCapturing}
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-2 no-screenshot"
+            >
+              {isCapturing ? (
+                <>
+                  <Download className="h-4 w-4 animate-spin" />
+                  <span>{t("screenshot.capturing")}</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="h-4 w-4" />
+                  <span>{t("screenshot.capture")}</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-8">
-        {/* 热量平衡 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calculator className="mr-2 h-5 w-5 text-primary" />
-              {t("calorieBalance")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* 卡路里摄入 */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <Utensils className="mr-2 h-5 w-5 text-green-500" />
-                  <span className="text-lg font-medium">{t("caloriesIn")}</span>
-                </div>
-                <span className="text-2xl font-bold text-green-600">
-                  {totalCaloriesConsumed.toFixed(0)} kcal
-                </span>
-              </div>
-
-              {/* 膳食列表 */}
-              {foodEntries.length > 0 ? (
-                <div className="space-y-3">
-                  {foodEntries.map((entry) => (
-                    <FoodEntryCard
-                      key={entry.log_id}
-                      entry={entry}
-                      onEdit={() => {}}
-                      onDelete={() => {}}
-                      showActions={false}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">
-                  {t("noFoodEntries")}
-                </p>
-              )}
-            </div>
-
-            {/* 运动消耗 */}
-            <div className="border-t pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <Flame className="mr-2 h-5 w-5 text-red-500" />
-                  <span className="text-lg font-medium">
-                    {t("exerciseBurn")}
+        <div className="space-y-8">
+          {/* 热量平衡 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calculator className="mr-2 h-5 w-5 text-primary" />
+                {t("calorieBalance")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 卡路里摄入 */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <Utensils className="mr-2 h-5 w-5 text-green-500" />
+                    <span className="text-lg font-medium">
+                      {t("caloriesIn")}
+                    </span>
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">
+                    {totalCaloriesConsumed.toFixed(0)} kcal
                   </span>
                 </div>
-                <span className="text-2xl font-bold text-red-600">
-                  {totalCaloriesBurned.toFixed(0)} kcal
-                </span>
+
+                {/* 膳食列表 */}
+                {foodEntries.length > 0 ? (
+                  <div className="space-y-3">
+                    {foodEntries.map((entry) => (
+                      <FoodEntryCard
+                        key={entry.log_id}
+                        entry={entry}
+                        onEdit={() => {}}
+                        onDelete={() => {}}
+                        showActions={false}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    {t("noFoodEntries")}
+                  </p>
+                )}
               </div>
 
-              {/* 运动列表 */}
-              {exerciseEntries.length > 0 ? (
-                <div className="space-y-3">
-                  {exerciseEntries.map((entry) => (
-                    <ExerciseEntryCard
-                      key={entry.log_id}
-                      entry={entry}
-                      onEdit={() => {}}
-                      onDelete={() => {}}
-                      showActions={false}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">
-                  {t("noExerciseEntries")}
-                </p>
-              )}
-            </div>
-
-            {/* 净卡路里 */}
-            <div className="border-t pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {netCalories > 0 ? (
-                    <TrendingUp className="mr-2 h-5 w-5 text-orange-500" />
-                  ) : (
-                    <TrendingDown className="mr-2 h-5 w-5 text-blue-500" />
-                  )}
-                  <span className="text-lg font-medium">
-                    {t("netCalories")}
+              {/* 运动消耗 */}
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <Flame className="mr-2 h-5 w-5 text-red-500" />
+                    <span className="text-lg font-medium">
+                      {t("exerciseBurn")}
+                    </span>
+                  </div>
+                  <span className="text-2xl font-bold text-red-600">
+                    {totalCaloriesBurned.toFixed(0)} kcal
                   </span>
                 </div>
-                <span
-                  className={`text-2xl font-bold ${
-                    netCalories > 0 ? "text-orange-500" : "text-blue-500"
-                  }`}
-                >
-                  {netCalories.toFixed(0)} kcal
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* 估算每日能量需求 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Target className="mr-2 h-5 w-5 text-primary" />
-              {t("estimatedDailyNeeds")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* BMR */}
-            {calculatedBMR && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <BedDouble className="mr-2 h-5 w-5 text-purple-500" />
-                  <div>
-                    <span className="text-lg font-medium">{t("bmr")}</span>
-                    <p className="text-sm text-muted-foreground">
-                      {t("bmrDescription")}
-                    </p>
+                {/* 运动列表 */}
+                {exerciseEntries.length > 0 ? (
+                  <div className="space-y-3">
+                    {exerciseEntries.map((entry) => (
+                      <ExerciseEntryCard
+                        key={entry.log_id}
+                        entry={entry}
+                        onEdit={() => {}}
+                        onDelete={() => {}}
+                        showActions={false}
+                      />
+                    ))}
                   </div>
-                </div>
-                <span className="text-2xl font-bold text-purple-600">
-                  {calculatedBMR.toFixed(0)} kcal
-                </span>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    {t("noExerciseEntries")}
+                  </p>
+                )}
               </div>
-            )}
 
-            {/* TDEE */}
-            {calculatedTDEE && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Target className="mr-2 h-5 w-5 text-indigo-500" />
-                  <div>
-                    <span className="text-lg font-medium">{t("tdee")}</span>
-                    <p className="text-sm text-muted-foreground">
-                      {t("tdeeDescription")}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-2xl font-bold text-indigo-600">
-                  {calculatedTDEE.toFixed(0)} kcal
-                </span>
-              </div>
-            )}
-
-            {/* 热量缺口/盈余 */}
-            {calorieDifference !== null && (
-              <div className="border-t pt-4">
+              {/* 净卡路里 */}
+              <div className="border-t pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    {calorieDifference === 0 ? (
-                      <Minus className="mr-2 h-5 w-5 text-blue-500" />
-                    ) : calorieDifference > 0 ? (
-                      <TrendingDown className="mr-2 h-5 w-5 text-green-600" />
-                    ) : (
+                    {netCalories > 0 ? (
                       <TrendingUp className="mr-2 h-5 w-5 text-orange-500" />
+                    ) : (
+                      <TrendingDown className="mr-2 h-5 w-5 text-blue-500" />
                     )}
+                    <span className="text-lg font-medium">
+                      {t("netCalories")}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-2xl font-bold ${
+                      netCalories > 0 ? "text-orange-500" : "text-blue-500"
+                    }`}
+                  >
+                    {netCalories.toFixed(0)} kcal
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 估算每日能量需求 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Target className="mr-2 h-5 w-5 text-primary" />
+                {t("estimatedDailyNeeds")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* BMR */}
+              {calculatedBMR && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <BedDouble className="mr-2 h-5 w-5 text-purple-500" />
                     <div>
-                      <span className="text-lg font-medium">
-                        {t("calorieDeficitSurplus")}
-                      </span>
+                      <span className="text-lg font-medium">{t("bmr")}</span>
                       <p className="text-sm text-muted-foreground">
-                        {t("deficitSurplusDescription")}
+                        {t("bmrDescription")}
                       </p>
                     </div>
                   </div>
-                  <span className={`text-2xl font-bold ${calorieStatusColor}`}>
-                    {calorieStatusText}
+                  <span className="text-2xl font-bold text-purple-600">
+                    {calculatedBMR.toFixed(0)} kcal
                   </span>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="bg-muted/50 rounded-lg p-4 mt-4">
-              <p className="text-sm text-muted-foreground flex items-start">
-                <Info className="mr-2 h-4 w-4 flex-shrink-0 mt-0.5" />
-                <span>{t("estimationNote")}</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              {/* TDEE */}
+              {calculatedTDEE && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Target className="mr-2 h-5 w-5 text-indigo-500" />
+                    <div>
+                      <span className="text-lg font-medium">{t("tdee")}</span>
+                      <p className="text-sm text-muted-foreground">
+                        {t("tdeeDescription")}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-indigo-600">
+                    {calculatedTDEE.toFixed(0)} kcal
+                  </span>
+                </div>
+              )}
 
-        {/* 智能建议 */}
-        {smartSuggestions &&
-          smartSuggestions.suggestions &&
-          smartSuggestions.suggestions.length > 0 && (
-            <Card className="no-screenshot smart-suggestions-card">
-              <Collapsible
-                open={isSmartSuggestionsOpen}
-                onOpenChange={setIsSmartSuggestionsOpen}
-              >
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Brain className="mr-2 h-5 w-5 text-primary" />
-                        {t("smartSuggestions")}
-                        <span className="ml-2 text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
-                          {smartSuggestions.suggestions.reduce(
-                            (total, category) =>
-                              total + category.suggestions.length,
-                            0
-                          )}
-                        </span>
-                      </div>
-                      {isSmartSuggestionsOpen ? (
-                        <ChevronUp className="h-5 w-5" />
+              {/* 热量缺口/盈余 */}
+              {calorieDifference !== null && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      {calorieDifference === 0 ? (
+                        <Minus className="mr-2 h-5 w-5 text-blue-500" />
+                      ) : calorieDifference > 0 ? (
+                        <TrendingDown className="mr-2 h-5 w-5 text-green-600" />
                       ) : (
-                        <ChevronDown className="h-5 w-5" />
+                        <TrendingUp className="mr-2 h-5 w-5 text-orange-500" />
                       )}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <div className="space-y-4">
-                      {/* 显示生成时间 */}
-                      <div className="text-xs text-muted-foreground mb-4">
-                        生成时间:{" "}
-                        {format(
-                          new Date(smartSuggestions.generatedAt),
-                          "yyyy-MM-dd HH:mm"
-                        )}
+                      <div>
+                        <span className="text-lg font-medium">
+                          {t("calorieDeficitSurplus")}
+                        </span>
+                        <p className="text-sm text-muted-foreground">
+                          {t("deficitSurplusDescription")}
+                        </p>
                       </div>
+                    </div>
+                    <span
+                      className={`text-2xl font-bold ${calorieStatusColor}`}
+                    >
+                      {calorieStatusText}
+                    </span>
+                  </div>
+                </div>
+              )}
 
-                      {/* 按类别显示建议 */}
-                      {smartSuggestions.suggestions.map(
-                        (category, categoryIndex) => (
-                          <div
-                            key={categoryIndex}
-                            className="border rounded-lg p-4"
-                          >
-                            <div className="mb-3">
-                              <h4 className="font-medium text-base flex items-center">
-                                <span className="mr-2">
-                                  {category.suggestions[0]?.icon || "💡"}
-                                </span>
-                                {category.category}
-                                <span
-                                  className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                                    category.priority === "high"
-                                      ? "bg-red-100 text-red-700"
-                                      : category.priority === "medium"
-                                      ? "bg-yellow-100 text-yellow-700"
-                                      : "bg-gray-100 text-gray-700"
-                                  }`}
-                                >
-                                  {category.priority === "high"
-                                    ? "高优先级"
-                                    : category.priority === "medium"
-                                    ? "中优先级"
-                                    : "低优先级"}
-                                </span>
-                              </h4>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {category.summary}
-                              </p>
-                            </div>
+              <div className="bg-muted/50 rounded-lg p-4 mt-4">
+                <p className="text-sm text-muted-foreground flex items-start">
+                  <Info className="mr-2 h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{t("estimationNote")}</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-                            {/* 具体建议 */}
-                            <div className="space-y-2">
-                              {category.suggestions.map(
-                                (suggestion, suggestionIndex) => (
-                                  <div
-                                    key={suggestionIndex}
-                                    className="border-l-2 border-primary/20 pl-3 py-2 bg-muted/30 rounded-r"
+          {/* 智能建议 */}
+          {smartSuggestions &&
+            smartSuggestions.suggestions &&
+            smartSuggestions.suggestions.length > 0 && (
+              <Card className="no-screenshot smart-suggestions-card">
+                <Collapsible
+                  open={isSmartSuggestionsOpen}
+                  onOpenChange={setIsSmartSuggestionsOpen}
+                >
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <Brain className="mr-2 h-5 w-5 text-primary" />
+                          {t("smartSuggestions")}
+                          <span className="ml-2 text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
+                            {smartSuggestions.suggestions.reduce(
+                              (total, category) =>
+                                total + category.suggestions.length,
+                              0
+                            )}
+                          </span>
+                        </div>
+                        {isSmartSuggestionsOpen ? (
+                          <ChevronUp className="h-5 w-5" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5" />
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
+                        {/* 显示生成时间 */}
+                        <div className="text-xs text-muted-foreground mb-4">
+                          生成时间:{" "}
+                          {format(
+                            new Date(smartSuggestions.generatedAt),
+                            "yyyy-MM-dd HH:mm"
+                          )}
+                        </div>
+
+                        {/* 按类别显示建议 */}
+                        {smartSuggestions.suggestions.map(
+                          (category, categoryIndex) => (
+                            <div
+                              key={categoryIndex}
+                              className="border rounded-lg p-4"
+                            >
+                              <div className="mb-3">
+                                <h4 className="font-medium text-base flex items-center">
+                                  <span className="mr-2">
+                                    {category.suggestions[0]?.icon || "💡"}
+                                  </span>
+                                  {category.category}
+                                  <span
+                                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                                      category.priority === "high"
+                                        ? "bg-red-100 text-red-700"
+                                        : category.priority === "medium"
+                                        ? "bg-yellow-100 text-yellow-700"
+                                        : "bg-gray-100 text-gray-700"
+                                    }`}
                                   >
-                                    <div className="flex items-start space-x-2">
-                                      <span className="text-sm flex-shrink-0">
-                                        {suggestion.icon}
-                                      </span>
-                                      <div className="flex-1">
-                                        <h5 className="font-medium text-sm">
-                                          {suggestion.title}
-                                        </h5>
-                                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                                          {suggestion.description}
-                                        </p>
-                                        {suggestion.actionable && (
-                                          <span className="inline-block mt-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                            可执行建议
-                                          </span>
-                                        )}
+                                    {category.priority === "high"
+                                      ? "高优先级"
+                                      : category.priority === "medium"
+                                      ? "中优先级"
+                                      : "低优先级"}
+                                  </span>
+                                </h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {category.summary}
+                                </p>
+                              </div>
+
+                              {/* 具体建议 */}
+                              <div className="space-y-2">
+                                {category.suggestions.map(
+                                  (suggestion, suggestionIndex) => (
+                                    <div
+                                      key={suggestionIndex}
+                                      className="border-l-2 border-primary/20 pl-3 py-2 bg-muted/30 rounded-r"
+                                    >
+                                      <div className="flex items-start space-x-2">
+                                        <span className="text-sm flex-shrink-0">
+                                          {suggestion.icon}
+                                        </span>
+                                        <div className="flex-1">
+                                          <h5 className="font-medium text-sm">
+                                            {suggestion.title}
+                                          </h5>
+                                          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                                            {suggestion.description}
+                                          </p>
+                                          {suggestion.actionable && (
+                                            <span className="inline-block mt-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                              可执行建议
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                )
-                              )}
+                                  )
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          )}
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            )}
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
 

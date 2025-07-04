@@ -11,6 +11,7 @@ import { ConditionalNav } from "@/components/conditional-nav";
 import { AuthProvider } from "@/components/auth-provider";
 import { VersionChecker } from "@/components/version-checker";
 import { locales } from "@/i18n";
+import { AuthGuard } from "@/components/auth-guard";
 
 const inter = Inter({ subsets: ["latin"] });
 

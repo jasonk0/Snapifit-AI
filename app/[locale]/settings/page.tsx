@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, RefreshCw, UploadCloud } from "lucide-react";
 import { useTranslation } from "@/hooks/use-i18n";
+import { AuthGuard } from "@/components/auth-guard";
 
 const defaultUserProfile = {
   weight: 70,
@@ -91,7 +92,11 @@ function SettingsContent() {
   const t = useTranslation("settings");
   const searchParams = useSearchParams();
   // 使用服务器端用户配置存储
-  const { userProfile, saveUserProfile: saveUserProfileServer, isLoading: profileLoading } = useUserProfileServer();
+  const {
+    userProfile,
+    saveUserProfile: saveUserProfileServer,
+    isLoading: profileLoading,
+  } = useUserProfileServer();
   const currentUserProfile = userProfile || defaultUserProfile;
 
   // 使用服务器端 AI 配置存储
@@ -261,8 +266,12 @@ function SettingsContent() {
   );
 
   // 使用独立的表单状态，从服务端数据初始化
-  const [formData, setFormData] = useState(currentUserProfile || defaultUserProfile);
-  const [aiFormData, setAIFormData] = useState(currentAIConfig || defaultAIConfig);
+  const [formData, setFormData] = useState(
+    currentUserProfile || defaultUserProfile
+  );
+  const [aiFormData, setAIFormData] = useState(
+    currentAIConfig || defaultAIConfig
+  );
 
   // 同步服务端数据到表单状态
   useEffect(() => {
@@ -484,7 +493,8 @@ function SettingsContent() {
       console.error("Failed to save user profile:", error);
       toast({
         title: t("profile.saveFailed"),
-        description: error instanceof Error ? error.message : t("profile.saveFailedDesc"),
+        description:
+          error instanceof Error ? error.message : t("profile.saveFailedDesc"),
         variant: "destructive",
       });
     }
@@ -724,50 +734,54 @@ function SettingsContent() {
       const modelConfig = aiFormData[modelType];
 
       return (
-        <div className="flex space-x-2 items-end">
-          {models.length > 0 ? (
-            <div className="flex-1">
-              <Select
-                value={modelConfig.name}
-                onValueChange={(value) =>
-                  handleAIConfigChange(modelType, "name", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("ai.selectModel")} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px]">
-                  {models.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <Input
-              className="flex-1"
-              value={modelConfig.name}
-              onChange={(e) =>
-                handleAIConfigChange(modelType, "name", e.target.value)
-              }
-              placeholder={t("ai.modelNamePlaceholder")}
-            />
-          )}
-          <Button
-            variant="outline"
-            onClick={() => fetchModels(modelType)}
-            disabled={isLoading || !modelConfig.baseUrl || !modelConfig.apiKey}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+        <AuthGuard>
+          <div className="flex space-x-2 items-end">
+            {models.length > 0 ? (
+              <div className="flex-1">
+                <Select
+                  value={modelConfig.name}
+                  onValueChange={(value) =>
+                    handleAIConfigChange(modelType, "name", value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("ai.selectModel")} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {models.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ) : (
-              <RefreshCw className="h-4 w-4" />
+              <Input
+                className="flex-1"
+                value={modelConfig.name}
+                onChange={(e) =>
+                  handleAIConfigChange(modelType, "name", e.target.value)
+                }
+                placeholder={t("ai.modelNamePlaceholder")}
+              />
             )}
-            <span className="ml-2">{t("ai.fetchModels")}</span>
-          </Button>
-        </div>
+            <Button
+              variant="outline"
+              onClick={() => fetchModels(modelType)}
+              disabled={
+                isLoading || !modelConfig.baseUrl || !modelConfig.apiKey
+              }
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2">{t("ai.fetchModels")}</span>
+            </Button>
+          </div>
+        </AuthGuard>
       );
     },
     [aiFormData, handleAIConfigChange, fetchModels]
@@ -817,7 +831,10 @@ function SettingsContent() {
         </TabsList>
 
         {/* 个人信息 */}
-        <TabsContent value="profile" className="mt-6 focus-visible:outline-none">
+        <TabsContent
+          value="profile"
+          className="mt-6 focus-visible:outline-none"
+        >
           <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <CardTitle>{t("profile.title")}</CardTitle>
@@ -1458,10 +1475,10 @@ function SettingsContent() {
                                 <div className="text-xs text-muted-foreground">
                                   {(editingMemories[expertId] || "").length >
                                     400 && (
-                                      <span className="text-amber-600">
-                                        即将达到上限
-                                      </span>
-                                    )}
+                                    <span className="text-amber-600">
+                                      即将达到上限
+                                    </span>
+                                  )}
                                   {hasUnsavedChanges(expertId) && (
                                     <span className="text-amber-600">
                                       3秒后自动保存

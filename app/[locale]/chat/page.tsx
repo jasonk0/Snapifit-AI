@@ -34,6 +34,7 @@ import {
 import type { Message } from "ai";
 import { useTranslation } from "@/hooks/use-i18n";
 import styles from "./chat.module.css";
+import { AuthGuard } from "@/components/auth-guard";
 
 // 专家角色定义
 interface ExpertRole {
@@ -657,64 +658,117 @@ export default function ChatPage() {
   }, [error]);
 
   return (
-    <div className="container mx-auto py-3 md:py-6 max-w-7xl min-w-0 px-4 md:px-6">
-      <div
-        className={`${
-          isMobile
-            ? "flex flex-col h-[calc(100vh-2rem)]"
-            : "flex gap-6 h-[80vh]"
-        }`}
-      >
-        {/* 移动端专家选择下拉菜单 */}
-        {isMobile && (
-          <div className="mb-4">
-            <div className="relative expert-dropdown">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowExpertDropdown(!showExpertDropdown);
-                }}
-                onMouseDown={(e) => e.preventDefault()}
-                className="w-full flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm"
-              >
-                <div className="flex items-center space-x-3">
-                  <div
-                    className={`p-2 rounded-lg ${currentExpert.color} text-white`}
-                  >
-                    <currentExpert.icon className="h-4 w-4" />
-                  </div>
-                  <div className="text-left">
-                    <div className="flex items-center space-x-2">
-                      <p className="font-medium text-sm">
-                        {getExpertDisplayInfo(currentExpert).name}
-                      </p>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                        SnapFit AI
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {getExpertDisplayInfo(currentExpert).title}
-                    </p>
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${
-                    showExpertDropdown ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {showExpertDropdown && (
-                <div
-                  className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-[100] max-h-80 overflow-y-auto"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  style={{
-                    position: "absolute",
-                    zIndex: 100,
+    <AuthGuard>
+      <div className="container mx-auto py-3 md:py-6 max-w-7xl min-w-0 px-4 md:px-6">
+        <div
+          className={`${
+            isMobile
+              ? "flex flex-col h-[calc(100vh-2rem)]"
+              : "flex gap-6 h-[80vh]"
+          }`}
+        >
+          {/* 移动端专家选择下拉菜单 */}
+          {isMobile && (
+            <div className="mb-4">
+              <div className="relative expert-dropdown">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowExpertDropdown(!showExpertDropdown);
                   }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="w-full flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm"
                 >
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={`p-2 rounded-lg ${currentExpert.color} text-white`}
+                    >
+                      <currentExpert.icon className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <div className="flex items-center space-x-2">
+                        <p className="font-medium text-sm">
+                          {getExpertDisplayInfo(currentExpert).name}
+                        </p>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                          SnapFit AI
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {getExpertDisplayInfo(currentExpert).title}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      showExpertDropdown ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showExpertDropdown && (
+                  <div
+                    className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-[100] max-h-80 overflow-y-auto"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    style={{
+                      position: "absolute",
+                      zIndex: 100,
+                    }}
+                  >
+                    {expertRoles.map((expert) => {
+                      const IconComponent = expert.icon;
+                      const isSelected = selectedExpert === expert.id;
+                      const expertInfo = getExpertDisplayInfo(expert);
+                      return (
+                        <button
+                          key={expert.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleExpertSelect(expert.id);
+                          }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          className={`w-full text-left p-3 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors ${
+                            isSelected
+                              ? "bg-primary/5 text-primary"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div
+                              className={`p-1.5 rounded-lg ${expert.color} text-white flex-shrink-0`}
+                            >
+                              <IconComponent className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-sm">
+                                {expertInfo.name}
+                              </h3>
+                              <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                                {expertInfo.title}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 桌面端左侧专家选择栏 */}
+          {!isMobile && (
+            <Card className="w-80 flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-lg">{t("title")}</CardTitle>
+                <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto">
+                <div className="space-y-3">
                   {expertRoles.map((expert) => {
                     const IconComponent = expert.icon;
                     const isSelected = selectedExpert === expert.id;
@@ -722,30 +776,28 @@ export default function ChatPage() {
                     return (
                       <button
                         key={expert.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleExpertSelect(expert.id);
-                        }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        className={`w-full text-left p-3 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors ${
+                        onClick={() => handleExpertSelect(expert.id)}
+                        className={`w-full text-left p-4 rounded-lg border transition-all ${
                           isSelected
-                            ? "bg-primary/5 text-primary"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
                         }`}
                       >
                         <div className="flex items-start space-x-3">
                           <div
-                            className={`p-1.5 rounded-lg ${expert.color} text-white flex-shrink-0`}
+                            className={`p-2 rounded-lg ${expert.color} text-white flex-shrink-0`}
                           >
-                            <IconComponent className="h-4 w-4" />
+                            <IconComponent className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-sm">
                               {expertInfo.name}
                             </h3>
-                            <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                            <p className="text-xs text-muted-foreground font-medium mt-1">
                               {expertInfo.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                              {expertInfo.description}
                             </p>
                           </div>
                         </div>
@@ -753,371 +805,327 @@ export default function ChatPage() {
                     );
                   })}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </CardContent>
+            </Card>
+          )}
 
-        {/* 桌面端左侧专家选择栏 */}
-        {!isMobile && (
-          <Card className="w-80 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-lg">{t("title")}</CardTitle>
-              <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto">
-              <div className="space-y-3">
-                {expertRoles.map((expert) => {
-                  const IconComponent = expert.icon;
-                  const isSelected = selectedExpert === expert.id;
-                  const expertInfo = getExpertDisplayInfo(expert);
-                  return (
-                    <button
-                      key={expert.id}
-                      onClick={() => handleExpertSelect(expert.id)}
-                      className={`w-full text-left p-4 rounded-lg border transition-all ${
-                        isSelected
-                          ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-border hover:border-primary/50 hover:bg-muted/50"
-                      }`}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <div
-                          className={`p-2 rounded-lg ${expert.color} text-white flex-shrink-0`}
-                        >
-                          <IconComponent className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm">
-                            {expertInfo.name}
-                          </h3>
-                          <p className="text-xs text-muted-foreground font-medium mt-1">
-                            {expertInfo.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                            {expertInfo.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 聊天区域 */}
-        <Card className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <CardHeader
-            className={`${isMobile ? "p-2" : "p-3"} border-b border-border`}
-          >
-            <div
-              className={`${
-                isMobile
-                  ? "flex flex-col space-y-2"
-                  : "flex justify-between items-center"
-              }`}
+          {/* 聊天区域 */}
+          <Card className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <CardHeader
+              className={`${isMobile ? "p-2" : "p-3"} border-b border-border`}
             >
-              {/* 桌面端专家信息 */}
-              {!isMobile && (
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`p-1.5 rounded-md ${currentExpert.color} text-white`}
-                  >
-                    <currentExpert.icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <CardTitle className="text-base">
-                        {getExpertDisplayInfo(currentExpert).name}
-                      </CardTitle>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                        SnapFit AI
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {getExpertDisplayInfo(currentExpert).title}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* 控制按钮区域 */}
               <div
                 className={`${
                   isMobile
-                    ? "flex items-center justify-between"
-                    : "flex items-center space-x-3"
+                    ? "flex flex-col space-y-2"
+                    : "flex justify-between items-center"
                 }`}
               >
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="include-data"
-                    checked={includeHealthData}
-                    onCheckedChange={setIncludeHealthData}
-                  />
-                  <Label htmlFor="include-data" className="text-xs">
-                    {t("includeHealthData")}
-                  </Label>
-                </div>
-                {isClient && messages.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearChatHistory}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 px-2 text-xs"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    {t("clearHistory")}
-                  </Button>
-                )}
-              </div>
-            </div>
-            {isClient && !checkAIConfig() && (
-              <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-2 rounded mt-2">
-                {t("configureAI")}
-              </div>
-            )}
-            {isClient && error && (
-              <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 p-2 rounded mt-2">
-                错误: {error.message}
-              </div>
-            )}
-          </CardHeader>
-          <CardContent
-            className={`flex-1 flex flex-col min-w-0 overflow-hidden ${
-              isMobile ? "p-2" : "p-4"
-            }`}
-          >
-            <ScrollArea
-              className={`flex-1 w-full ${isMobile ? "pr-2" : "pr-4"}`}
-            >
-              <div
-                className={`space-y-3 pb-4 w-full max-w-full overflow-hidden ${
-                  isMobile ? "space-y-2" : "space-y-4"
-                }`}
-              >
-                {!isClient ? (
-                  // 服务端渲染时显示简单的加载状态
-                  <div className={`text-center ${isMobile ? "py-4" : "py-8"}`}>
-                    <p
-                      className={`font-medium ${
-                        isMobile ? "text-base" : "text-lg"
-                      }`}
-                    >
-                      {t("loading")}
-                    </p>
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div
-                    className={`${
-                      isMobile ? "py-4 px-2" : "py-8 px-4"
-                    } max-w-2xl mx-auto`}
-                  >
-                    {/* 专家头像和标题 */}
-                    <div className="text-center mb-6">
-                      <div
-                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${currentExpert.color} text-white mb-4`}
-                      >
-                        <currentExpert.icon className="h-8 w-8" />
-                      </div>
-                      <h1
-                        className={`font-bold ${
-                          isMobile ? "text-lg" : "text-xl"
-                        } text-slate-900 dark:text-slate-100 mb-2`}
-                      >
-                        {tChatExperts(
-                          `${selectedExpert}.welcomeMessage.title`
-                        ) || t("welcomeMessage")}
-                      </h1>
-                      <p
-                        className={`text-muted-foreground ${
-                          isMobile ? "text-sm" : "text-base"
-                        } leading-relaxed`}
-                      >
-                        {tChatExperts(
-                          `${selectedExpert}.welcomeMessage.subtitle`
-                        ) || t("welcomeDescription")}
-                      </p>
-                    </div>
-
-                    {/* 专家特色功能 */}
-                    {tChatExperts(
-                      `${selectedExpert}.welcomeMessage.features.0`
-                    ) && (
-                      <div className="mb-6">
-                        <div
-                          className={`grid ${
-                            isMobile ? "grid-cols-1 gap-2" : "grid-cols-2 gap-3"
-                          }`}
-                        >
-                          {[0, 1, 2, 3].map((index) => {
-                            const feature = tChatExperts(
-                              `${selectedExpert}.welcomeMessage.features.${index}`
-                            );
-                            if (!feature) return null;
-                            return (
-                              <div
-                                key={index}
-                                className={`flex items-center ${
-                                  isMobile ? "text-sm" : "text-base"
-                                } text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-lg p-3`}
-                              >
-                                <span className="flex-shrink-0 mr-3">
-                                  {feature.split(" ")[0]}
-                                </span>
-                                <span className="flex-1">
-                                  {feature.split(" ").slice(1).join(" ")}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 开始对话提示 */}
-                    <div className="text-center">
-                      <p
-                        className={`text-muted-foreground ${
-                          isMobile ? "text-xs" : "text-sm"
-                        } mb-3`}
-                      >
-                        {t("startConversation", {
-                          expert:
-                            tChatExperts(`${selectedExpert}.name`) ||
-                            getExpertDisplayInfo(currentExpert).name,
-                        })}
-                      </p>
-                      {!checkAIConfig() && (
-                        <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-3 rounded-lg">
-                          {t("configureAIPrompt")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  messages.map((message) => (
+                {/* 桌面端专家信息 */}
+                {!isMobile && (
+                  <div className="flex items-center space-x-2">
                     <div
-                      key={message.id}
-                      className={`flex ${
-                        message.role === "user"
-                          ? "justify-end"
-                          : "justify-start"
-                      } w-full max-w-full`}
+                      className={`p-1.5 rounded-md ${currentExpert.color} text-white`}
                     >
-                      <div
-                        className={`${
-                          isMobile ? "max-w-[90%]" : "max-w-[95%]"
-                        } w-auto min-w-0 rounded-xl ${
-                          isMobile ? "px-3 py-2" : "px-4 py-3"
-                        } shadow-sm overflow-hidden ${
-                          styles.messageContainer
-                        } ${
-                          message.role === "user"
-                            ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
-                            : "bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
+                      <currentExpert.icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <CardTitle className="text-base">
+                          {getExpertDisplayInfo(currentExpert).name}
+                        </CardTitle>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                          SnapFit AI
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {getExpertDisplayInfo(currentExpert).title}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 控制按钮区域 */}
+                <div
+                  className={`${
+                    isMobile
+                      ? "flex items-center justify-between"
+                      : "flex items-center space-x-3"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="include-data"
+                      checked={includeHealthData}
+                      onCheckedChange={setIncludeHealthData}
+                    />
+                    <Label htmlFor="include-data" className="text-xs">
+                      {t("includeHealthData")}
+                    </Label>
+                  </div>
+                  {isClient && messages.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearChatHistory}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 px-2 text-xs"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      {t("clearHistory")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {isClient && !checkAIConfig() && (
+                <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-2 rounded mt-2">
+                  {t("configureAI")}
+                </div>
+              )}
+              {isClient && error && (
+                <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 p-2 rounded mt-2">
+                  错误: {error.message}
+                </div>
+              )}
+            </CardHeader>
+            <CardContent
+              className={`flex-1 flex flex-col min-w-0 overflow-hidden ${
+                isMobile ? "p-2" : "p-4"
+              }`}
+            >
+              <ScrollArea
+                className={`flex-1 w-full ${isMobile ? "pr-2" : "pr-4"}`}
+              >
+                <div
+                  className={`space-y-3 pb-4 w-full max-w-full overflow-hidden ${
+                    isMobile ? "space-y-2" : "space-y-4"
+                  }`}
+                >
+                  {!isClient ? (
+                    // 服务端渲染时显示简单的加载状态
+                    <div
+                      className={`text-center ${isMobile ? "py-4" : "py-8"}`}
+                    >
+                      <p
+                        className={`font-medium ${
+                          isMobile ? "text-base" : "text-lg"
                         }`}
                       >
-                        {message.role === "user" ? (
-                          // 用户消息保持简单格式，确保文本换行
+                        {t("loading")}
+                      </p>
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div
+                      className={`${
+                        isMobile ? "py-4 px-2" : "py-8 px-4"
+                      } max-w-2xl mx-auto`}
+                    >
+                      {/* 专家头像和标题 */}
+                      <div className="text-center mb-6">
+                        <div
+                          className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${currentExpert.color} text-white mb-4`}
+                        >
+                          <currentExpert.icon className="h-8 w-8" />
+                        </div>
+                        <h1
+                          className={`font-bold ${
+                            isMobile ? "text-lg" : "text-xl"
+                          } text-slate-900 dark:text-slate-100 mb-2`}
+                        >
+                          {tChatExperts(
+                            `${selectedExpert}.welcomeMessage.title`
+                          ) || t("welcomeMessage")}
+                        </h1>
+                        <p
+                          className={`text-muted-foreground ${
+                            isMobile ? "text-sm" : "text-base"
+                          } leading-relaxed`}
+                        >
+                          {tChatExperts(
+                            `${selectedExpert}.welcomeMessage.subtitle`
+                          ) || t("welcomeDescription")}
+                        </p>
+                      </div>
+
+                      {/* 专家特色功能 */}
+                      {tChatExperts(
+                        `${selectedExpert}.welcomeMessage.features.0`
+                      ) && (
+                        <div className="mb-6">
                           <div
-                            className={`${styles.userMessage} ${
-                              isMobile ? "text-sm" : ""
+                            className={`grid ${
+                              isMobile
+                                ? "grid-cols-1 gap-2"
+                                : "grid-cols-2 gap-3"
                             }`}
                           >
-                            {message.content}
+                            {[0, 1, 2, 3].map((index) => {
+                              const feature = tChatExperts(
+                                `${selectedExpert}.welcomeMessage.features.${index}`
+                              );
+                              if (!feature) return null;
+                              return (
+                                <div
+                                  key={index}
+                                  className={`flex items-center ${
+                                    isMobile ? "text-sm" : "text-base"
+                                  } text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-lg p-3`}
+                                >
+                                  <span className="flex-shrink-0 mr-3">
+                                    {feature.split(" ")[0]}
+                                  </span>
+                                  <span className="flex-1">
+                                    {feature.split(" ").slice(1).join(" ")}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ) : (
-                          // AI消息使用增强渲染器，支持思考过程显示
-                          <div
-                            className={`${styles.aiMessage} ${
-                              isMobile ? "text-sm" : ""
-                            }`}
-                          >
-                            <EnhancedMessageRenderer
-                              content={message.content}
-                              className="text-inherit"
-                              isMobile={isMobile}
-                              isStreaming={
-                                isLoading &&
-                                messages[messages.length - 1]?.id === message.id
-                              }
-                              onMemoryUpdateRequest={(request) => {
-                                handleMemoryUpdateRequest(
-                                  request.newContent,
-                                  request.reason
-                                );
-                              }}
-                            />
-                          </div>
+                        </div>
+                      )}
+
+                      {/* 开始对话提示 */}
+                      <div className="text-center">
+                        <p
+                          className={`text-muted-foreground ${
+                            isMobile ? "text-xs" : "text-sm"
+                          } mb-3`}
+                        >
+                          {t("startConversation", {
+                            expert:
+                              tChatExperts(`${selectedExpert}.name`) ||
+                              getExpertDisplayInfo(currentExpert).name,
+                          })}
+                        </p>
+                        {!checkAIConfig() && (
+                          <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-3 rounded-lg">
+                            {t("configureAIPrompt")}
+                          </p>
                         )}
                       </div>
                     </div>
-                  ))
-                )}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div
-                      className={`bg-muted rounded-lg ${
-                        isMobile ? "px-3 py-2" : "px-4 py-2"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+                  ) : (
+                    messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${
+                          message.role === "user"
+                            ? "justify-end"
+                            : "justify-start"
+                        } w-full max-w-full`}
+                      >
                         <div
-                          className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"
-                          style={{ animationDelay: "0.4s" }}
-                        ></div>
-                        <span
-                          className={`text-muted-foreground ${
-                            isMobile ? "text-xs" : "text-sm"
+                          className={`${
+                            isMobile ? "max-w-[90%]" : "max-w-[95%]"
+                          } w-auto min-w-0 rounded-xl ${
+                            isMobile ? "px-3 py-2" : "px-4 py-3"
+                          } shadow-sm overflow-hidden ${
+                            styles.messageContainer
+                          } ${
+                            message.role === "user"
+                              ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                              : "bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
                           }`}
                         >
-                          {t("aiThinking")}
-                        </span>
+                          {message.role === "user" ? (
+                            // 用户消息保持简单格式，确保文本换行
+                            <div
+                              className={`${styles.userMessage} ${
+                                isMobile ? "text-sm" : ""
+                              }`}
+                            >
+                              {message.content}
+                            </div>
+                          ) : (
+                            // AI消息使用增强渲染器，支持思考过程显示
+                            <div
+                              className={`${styles.aiMessage} ${
+                                isMobile ? "text-sm" : ""
+                              }`}
+                            >
+                              <EnhancedMessageRenderer
+                                content={message.content}
+                                className="text-inherit"
+                                isMobile={isMobile}
+                                isStreaming={
+                                  isLoading &&
+                                  messages[messages.length - 1]?.id ===
+                                    message.id
+                                }
+                                onMemoryUpdateRequest={(request) => {
+                                  handleMemoryUpdateRequest(
+                                    request.newContent,
+                                    request.reason
+                                  );
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div
+                        className={`bg-muted rounded-lg ${
+                          isMobile ? "px-3 py-2" : "px-4 py-2"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+                          <div
+                            className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                          <div
+                            className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"
+                            style={{ animationDelay: "0.4s" }}
+                          ></div>
+                          <span
+                            className={`text-muted-foreground ${
+                              isMobile ? "text-xs" : "text-sm"
+                            }`}
+                          >
+                            {t("aiThinking")}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
 
-            <form
-              onSubmit={onSubmit}
-              className={`${isMobile ? "mt-2" : "mt-4"} flex space-x-2`}
-            >
-              <Input
-                value={input}
-                onChange={handleInputChange}
-                placeholder={
-                  isClient && checkAIConfig()
-                    ? t("inputPlaceholder")
-                    : t("configureAI")
-                }
-                disabled={isLoading || (isClient && !checkAIConfig())}
-                className={`flex-1 ${isMobile ? "text-base" : ""}`}
-              />
-              <Button
-                type="submit"
-                disabled={
-                  isLoading || !input.trim() || (isClient && !checkAIConfig())
-                }
-                size={isMobile ? "default" : "default"}
-                className={isMobile ? "px-4" : ""}
+              <form
+                onSubmit={onSubmit}
+                className={`${isMobile ? "mt-2" : "mt-4"} flex space-x-2`}
               >
-                {isLoading ? t("sending") : t("send")}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <Input
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder={
+                    isClient && checkAIConfig()
+                      ? t("inputPlaceholder")
+                      : t("configureAI")
+                  }
+                  disabled={isLoading || (isClient && !checkAIConfig())}
+                  className={`flex-1 ${isMobile ? "text-base" : ""}`}
+                />
+                <Button
+                  type="submit"
+                  disabled={
+                    isLoading || !input.trim() || (isClient && !checkAIConfig())
+                  }
+                  size={isMobile ? "default" : "default"}
+                  className={isMobile ? "px-4" : ""}
+                >
+                  {isLoading ? t("sending") : t("send")}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
