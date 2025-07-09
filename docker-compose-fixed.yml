@@ -1,0 +1,74 @@
+services:
+  snapifit-app:
+    image: ghcr.io/jasonk0/snapifit-ai:latest  # 使用 GitHub Actions 构建的镜像
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/prod.db
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=bonnie
+      - INVITE_CODE=bonnie
+      - OPENAI_API_MODEL=gpt-4.1-mini
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    volumes:
+      # 持久化数据库文件
+      - app_data:/app/data
+      # 持久化上传文件
+      - app_uploads:/app/public/uploads
+      # 持久化日志文件
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - db-init
+
+  # 数据库初始化服务 - 修复版本
+  db-init:
+    image: ghcr.io/jasonk0/snapifit-ai:latest  # 使用相同的镜像
+    volumes:
+      - app_data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/prod.db
+      - NEXTAUTH_SECRET=bonnie
+      - INVITE_CODE=bonnie
+    # 修复：使用项目中已安装的prisma版本，而不是全局安装
+    command: ["sh", "-c", "cd /app && npm run db:push && echo 'Database initialized'"]
+    restart: "no"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+      
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup
+    restart: unless-stopped
+
+volumes:
+  app_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /vol1/1000/docker/snapifit/data
+  
+  app_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /vol1/1000/docker/snapifit/uploads
+  
+  app_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /vol1/1000/docker/snapifit/logs

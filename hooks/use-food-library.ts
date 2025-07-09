@@ -6,6 +6,15 @@ import type {
   ParseContext
 } from '@/lib/types';
 
+// 获取认证头
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 interface ExportOptions {
   format?: 'json' | 'csv';
   category?: string;
@@ -99,8 +108,10 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
       if (params.limit) searchParams.set('limit', params.limit.toString());
       if (params.offset) searchParams.set('offset', params.offset.toString());
 
-      const response = await fetch(`/api/db/food-library?${searchParams}`);
-      
+      const response = await fetch(`/api/db/food-library?${searchParams}`, {
+        headers: getAuthHeaders()
+      });
+
       if (!response.ok) {
         throw new Error('搜索饮食库失败');
       }
@@ -127,9 +138,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library/match', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ foodName, limit }),
       });
 
@@ -150,9 +159,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library/parse', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ text }),
       });
 
@@ -175,9 +182,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(foodItem),
       });
 
@@ -202,9 +207,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id, ...updates }),
       });
 
@@ -231,6 +234,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch(`/api/db/food-library?id=${id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders()
       });
 
       if (!response.ok) {
@@ -253,9 +257,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library/match', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ foodItemId }),
       });
 
@@ -282,7 +284,9 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
   // 获取分类
   const getCategories = useCallback(async (): Promise<Array<{ name: string; count: number }>> => {
     try {
-      const response = await fetch('/api/db/food-library/categories');
+      const response = await fetch('/api/db/food-library/categories', {
+        headers: getAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error('获取分类失败');
@@ -303,9 +307,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     aiConfig?: any
   ): Promise<string | null> => {
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      const headers: Record<string, string> = getAuthHeaders();
 
       if (aiConfig) {
         headers['x-ai-config'] = JSON.stringify(aiConfig);
@@ -371,9 +373,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library/import', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ foodItems: data, options }),
       });
 
@@ -395,9 +395,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const response = await fetch('/api/db/food-library/import', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ foodItems: data }),
       });
 

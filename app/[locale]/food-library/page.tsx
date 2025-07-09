@@ -28,7 +28,7 @@ import type { FoodItem } from '@/lib/types';
 
 export default function FoodLibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('__all__');
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
@@ -87,7 +87,7 @@ export default function FoodLibraryPage() {
   const loadFoodItems = async () => {
     await searchFoodItems({
       query: searchQuery,
-      category: selectedCategory,
+      category: selectedCategory === '__all__' ? '' : selectedCategory,
       limit: 20,
       offset: 0
     });
@@ -349,7 +349,7 @@ export default function FoodLibraryPage() {
                 <SelectValue placeholder="选择分类" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">全部分类</SelectItem>
+                <SelectItem value="__all__">全部分类</SelectItem>
                 {categories.map(cat => (
                   <SelectItem key={cat.name} value={cat.name}>
                     {cat.name} ({cat.count})
