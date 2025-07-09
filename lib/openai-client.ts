@@ -23,6 +23,8 @@ export class OpenAICompatibleClient {
     messages: Array<{ role: string; content: string | Array<any> }>
     response_format?: { type: string }
     stream?: boolean
+    max_tokens?: number
+    temperature?: number
   }) {
     const url = `${this.baseUrl}/v1/chat/completions`
     console.log("Making request to:", url)
@@ -38,6 +40,8 @@ export class OpenAICompatibleClient {
       messages: params.messages,
       stream: params.stream || false,
       ...(params.response_format && { response_format: params.response_format }),
+      ...(params.max_tokens && { max_tokens: params.max_tokens }),
+      ...(params.temperature !== undefined && { temperature: params.temperature }),
     }
 
     console.log("Request body:", JSON.stringify(requestBody, null, 2))
@@ -73,6 +77,8 @@ export class OpenAICompatibleClient {
     prompt: string
     images?: string[]
     response_format?: { type: string }
+    max_tokens?: number
+    temperature?: number
   }) {
     console.log("Generating text with params:", {
       model: params.model,
@@ -102,6 +108,8 @@ export class OpenAICompatibleClient {
       model: params.model,
       messages,
       response_format: params.response_format,
+      max_tokens: params.max_tokens,
+      temperature: params.temperature,
     })
 
     const result = await response.json()
@@ -178,4 +186,9 @@ export interface OpenAIModel {
 export interface OpenAIModelList {
   object: string
   data: OpenAIModel[]
+}
+
+// 创建OpenAI客户端的工厂函数
+export function createOpenAIClient(modelConfig: { baseUrl: string; apiKey: string }) {
+  return new OpenAICompatibleClient(modelConfig.baseUrl, modelConfig.apiKey);
 }

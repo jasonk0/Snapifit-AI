@@ -1,0 +1,170 @@
+{
+  "metadata": {
+    "exportedAt": "2024-01-01T00:00:00.000Z",
+    "totalItems": 10,
+    "exportOptions": {
+      "category": "all",
+      "includeUsageStats": true
+    },
+    "version": "1.0"
+  },
+  "foodItems": [
+    {
+      "name": "苹果",
+      "category": "水果类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 52,
+        "protein": 0.3,
+        "fat": 0.2,
+        "carbs": 14,
+        "fiber": 2.4,
+        "sugar": 10.4
+      },
+      "sourceText": "「苹果」100g（每100g含52千卡，0.3g蛋白质，0.2g脂肪，14g碳水）",
+      "usageCount": 5
+    },
+    {
+      "name": "香蕉",
+      "category": "水果类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 89,
+        "protein": 1.1,
+        "fat": 0.3,
+        "carbs": 23,
+        "fiber": 2.6,
+        "sugar": 12.2
+      },
+      "sourceText": "「香蕉」100g（每100g含89千卡，1.1g蛋白质，0.3g脂肪，23g碳水）",
+      "usageCount": 3
+    },
+    {
+      "name": "鸡胸肉",
+      "category": "蛋白质类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 165,
+        "protein": 31,
+        "fat": 3.6,
+        "carbs": 0,
+        "fiber": 0,
+        "sodium": 74
+      },
+      "sourceText": "「鸡胸肉」100g（每100g含165千卡，31g蛋白质，3.6g脂肪，0g碳水）",
+      "usageCount": 8
+    },
+    {
+      "name": "白米饭",
+      "category": "主食类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 130,
+        "protein": 2.7,
+        "fat": 0.3,
+        "carbs": 28,
+        "fiber": 0.4
+      },
+      "sourceText": "「白米饭」100g（每100g含130千卡，2.7g蛋白质，0.3g脂肪，28g碳水）",
+      "usageCount": 12
+    },
+    {
+      "name": "西兰花",
+      "category": "蔬菜类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 34,
+        "protein": 2.8,
+        "fat": 0.4,
+        "carbs": 7,
+        "fiber": 2.6,
+        "sugar": 1.5
+      },
+      "sourceText": "「西兰花」100g（每100g含34千卡，2.8g蛋白质，0.4g脂肪，7g碳水）",
+      "usageCount": 4
+    },
+    {
+      "name": "牛奶",
+      "category": "乳制品类",
+      "nutritionPer": 100,
+      "nutritionUnit": "ml",
+      "nutrition": {
+        "calories": 42,
+        "protein": 3.4,
+        "fat": 1,
+        "carbs": 5,
+        "sugar": 5,
+        "sodium": 44
+      },
+      "sourceText": "「牛奶」100ml（每100ml含42千卡，3.4g蛋白质，1g脂肪，5g碳水）",
+      "usageCount": 6
+    },
+    {
+      "name": "鸡蛋",
+      "category": "蛋白质类",
+      "nutritionPer": 1,
+      "nutritionUnit": "个",
+      "nutrition": {
+        "calories": 70,
+        "protein": 6,
+        "fat": 5,
+        "carbs": 0.6,
+        "sodium": 70
+      },
+      "sourceText": "「鸡蛋」1个（每个含70千卡，6g蛋白质，5g脂肪，0.6g碳水）",
+      "usageCount": 10
+    },
+    {
+      "name": "燕麦",
+      "category": "主食类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 389,
+        "protein": 16.9,
+        "fat": 6.9,
+        "carbs": 66.3,
+        "fiber": 10.6,
+        "sugar": 0.99
+      },
+      "sourceText": "「燕麦」100g（每100g含389千卡，16.9g蛋白质，6.9g脂肪，66.3g碳水）",
+      "usageCount": 7
+    },
+    {
+      "name": "三文鱼",
+      "category": "蛋白质类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 208,
+        "protein": 25.4,
+        "fat": 12.4,
+        "carbs": 0,
+        "sodium": 59
+      },
+      "sourceText": "「三文鱼」100g（每100g含208千卡，25.4g蛋白质，12.4g脂肪，0g碳水）",
+      "usageCount": 2
+    },
+    {
+      "name": "胡萝卜",
+      "category": "蔬菜类",
+      "nutritionPer": 100,
+      "nutritionUnit": "g",
+      "nutrition": {
+        "calories": 41,
+        "protein": 0.9,
+        "fat": 0.2,
+        "carbs": 10,
+        "fiber": 2.8,
+        "sugar": 4.7
+      },
+      "sourceText": "「胡萝卜」100g（每100g含41千卡，0.9g蛋白质，0.2g脂肪，10g碳水）",
+      "usageCount": 3
+    }
+  ]
+}
