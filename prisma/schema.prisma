@@ -25,6 +25,7 @@ model User {
   exerciseEntries ExerciseEntry[]
   aiMemories      AIMemory[]
   aiConfig        AIConfig?
+  foodItems       FoodItem[]
 
   @@map("users")
 }
@@ -158,4 +159,23 @@ model AIConfig {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("ai_configs")
+}
+
+// 饮食库表
+model FoodItem {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String   // 从「」中提取的食物名称
+  category      String?  // AI生成的分类标签
+  nutritionPer  Float    // 营养成分对应的数量（如100）
+  nutritionUnit String   // 单位：'g', 'ml', '份', '个'等
+  nutrition     String   // JSON 字符串存储营养成分
+  sourceText    String   // 原始输入文本，用于用户参考
+  usageCount    Int      @default(0) // 使用次数统计
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("food_items")
 }

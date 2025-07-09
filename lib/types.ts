@@ -192,3 +192,72 @@ export interface ExtendedMessage {
   reasoning_content?: string; // 思考过程内容
   timestamp?: string;
 }
+
+// 饮食库相关类型
+export interface FoodItem {
+  id: string;
+  userId: string;
+  name: string; // 从「」中提取的食物名称
+  category?: string; // AI生成的分类标签
+  nutritionPer: number; // 营养成分对应的数量（如100）
+  nutritionUnit: string; // 单位：'g', 'ml', '份', '个'等
+  nutrition: {
+    calories: number; // 卡路里/千焦
+    protein: number; // 蛋白质(g)
+    fat: number; // 脂肪(g)
+    carbs: number; // 碳水化合物(g)
+    fiber?: number; // 纤维(g)
+    sugar?: number; // 糖(g)
+    sodium?: number; // 钠(mg)
+    [key: string]: number | undefined;
+  };
+  sourceText: string; // 原始输入文本，用于用户参考
+  usageCount: number; // 使用次数统计
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 解析上下文
+export interface ParseContext {
+  hasQuotedFoods: boolean; // 是否包含「」食物
+  quotedFoods: string[]; // 提取的「」食物列表
+  hasNutritionData: boolean; // 是否包含营养成分数据
+  nutritionSegments: NutritionSegment[]; // 营养成分片段
+}
+
+export interface NutritionSegment {
+  foodName: string; // 从「」提取的食物名称
+  rawText: string; // （）内的原始文本
+  parsedNutrition?: ParsedNutrition; // 解析后的营养数据
+  canAddToLibrary: boolean; // 是否可添加到饮食库
+}
+
+export interface ParsedNutrition {
+  nutritionPer: number; // 营养成分对应的数量
+  nutritionUnit: string; // 单位
+  nutrition: {
+    calories?: number;
+    protein?: number;
+    fat?: number;
+    carbs?: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    [key: string]: number | undefined;
+  };
+}
+
+// 饮食库匹配结果
+export interface FoodLibraryMatch {
+  foodItem: FoodItem;
+  similarity: number; // 相似度分数 0-1
+  matchType: 'exact' | 'partial' | 'fuzzy'; // 匹配类型
+}
+
+// 饮食库搜索参数
+export interface FoodLibrarySearchParams {
+  query?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}

@@ -12,6 +12,7 @@ import {
   User,
   LogOut,
   Database,
+  Utensils,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,16 @@ export function MainNav() {
       name: t("chat"),
       href: `/${locale}/chat`,
       icon: MessageSquare,
+    },
+    {
+      name: "饮食库",
+      href: `/${locale}/food-library`,
+      icon: Utensils,
+    },
+    {
+      name: "饮食库测试",
+      href: `/${locale}/test-food-library`,
+      icon: Utensils,
     },
     {
       name: "数据管理",

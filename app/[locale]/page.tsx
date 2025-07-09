@@ -63,6 +63,8 @@ import type {
   DailyLog,
   AIConfig,
   DailyStatus,
+  FoodLibraryMatch,
+  FoodItem,
 } from "@/lib/types";
 import { FoodEntryCard } from "@/components/food-entry-card";
 import { ExerciseEntryCard } from "@/components/exercise-entry-card";
@@ -70,6 +72,7 @@ import { DailySummary } from "@/components/daily-summary";
 import { ManagementCharts } from "@/components/management-charts";
 import { SmartSuggestions } from "@/components/smart-suggestions";
 import { DailyStatusCard } from "@/components/DailyStatusCard";
+import { EnhancedFoodInput } from "@/components/enhanced-food-input";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
@@ -1532,13 +1535,24 @@ export default function Dashboard({
                     initialStatus={dailyLog.dailyStatus}
                     onSave={handleSaveDailyStatus}
                   />
+                ) : activeTab === "food" ? (
+                  <EnhancedFoodInput
+                    value={inputText}
+                    onChange={setInputText}
+                    placeholder={t("placeholders.foodExample")}
+                    className="min-h-[140px] text-base p-6 rounded-xl"
+                    onFoodLibrarySelect={(match) => {
+                      // 处理饮食库选择
+                      console.log('Selected from food library:', match);
+                    }}
+                    onFoodLibraryAdd={(foodItem) => {
+                      // 处理添加到饮食库
+                      console.log('Added to food library:', foodItem);
+                    }}
+                  />
                 ) : (
                   <Textarea
-                    placeholder={
-                      activeTab === "food"
-                        ? t("placeholders.foodExample")
-                        : t("placeholders.exerciseExample")
-                    }
+                    placeholder={t("placeholders.exerciseExample")}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     className="min-h-[140px] text-base p-6 rounded-xl"
