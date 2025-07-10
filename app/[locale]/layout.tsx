@@ -12,6 +12,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { VersionChecker } from "@/components/version-checker";
 import { locales } from "@/i18n";
 import { AuthGuard } from "@/components/auth-guard";
+import { FoodLibraryProvider } from '@/hooks/FoodLibraryContext';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -50,10 +51,12 @@ export default async function LocaleLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen bg-background">
-            <ConditionalNav />
-            <main>{children}</main>
-          </div>
+          <FoodLibraryProvider>
+            <div className="min-h-screen bg-background">
+              <ConditionalNav />
+              <main>{children}</main>
+            </div>
+          </FoodLibraryProvider>
           <Toaster />
           <VersionChecker />
         </ThemeProvider>

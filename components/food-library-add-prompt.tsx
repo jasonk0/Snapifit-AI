@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { PlusCircle, X, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFoodLibrary } from '@/hooks/use-food-library';
+import { useFoodLibraryContext } from '@/hooks/FoodLibraryContext';
 import type { NutritionSegment, FoodItem } from '@/lib/types';
 
 interface FoodLibraryAddPromptProps {
@@ -36,33 +36,31 @@ export function FoodLibraryAddPrompt({
     sourceText: segment.rawText
   });
 
-  const { createFoodItem, generateCategory } = useFoodLibrary();
+  const { createFoodItem, generateCategory } = useFoodLibraryContext();
 
-  const handleOpenDialog = async () => {
+  const handleOpenDialog = () => {
     setIsDialogOpen(true);
-    
-    // 自动生成分类
-    if (!formData.category) {
-      try {
-        const category = await generateCategory(segment.foodName, segment.rawText);
-        if (category) {
-          setFormData(prev => ({ ...prev, category }));
-        }
-      } catch (error) {
-        console.error('Generate category error:', error);
-      }
-    }
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // 确保 nutrition 字段主项不为 undefined
+      const safeNutrition = {
+        calories: formData.nutrition.calories ?? 0,
+        protein: formData.nutrition.protein ?? 0,
+        fat: formData.nutrition.fat ?? 0,
+        carbs: formData.nutrition.carbs ?? 0,
+        fiber: formData.nutrition.fiber,
+        sugar: formData.nutrition.sugar,
+        sodium: formData.nutrition.sodium,
+      };
       const foodItem = await createFoodItem({
         name: formData.name,
         category: formData.category || undefined,
         nutritionPer: formData.nutritionPer,
         nutritionUnit: formData.nutritionUnit,
-        nutrition: formData.nutrition,
+        nutrition: safeNutrition,
         sourceText: formData.sourceText
       });
 
@@ -129,7 +127,7 @@ export function FoodLibraryAddPrompt({
                     <Label htmlFor="name">食物名称</Label>
                     <Input
                       id="name"
-                      value={formData.name}
+                      value={formData.name ?? ""}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="输入食物名称"
                     />
@@ -140,7 +138,7 @@ export function FoodLibraryAddPrompt({
                     <Label htmlFor="category">分类</Label>
                     <Input
                       id="category"
-                      value={formData.category}
+                      value={formData.category ?? ""}
                       onChange={(e) => handleInputChange('category', e.target.value)}
                       placeholder="如：主食类、蛋白质类等"
                     />
@@ -153,7 +151,7 @@ export function FoodLibraryAddPrompt({
                       <Input
                         id="nutritionPer"
                         type="number"
-                        value={formData.nutritionPer}
+                        value={formData.nutritionPer ?? 100}
                         onChange={(e) => handleInputChange('nutritionPer', parseFloat(e.target.value) || 100)}
                       />
                     </div>
@@ -161,7 +159,7 @@ export function FoodLibraryAddPrompt({
                       <Label htmlFor="nutritionUnit">单位</Label>
                       <Input
                         id="nutritionUnit"
-                        value={formData.nutritionUnit}
+                        value={formData.nutritionUnit ?? ""}
                         onChange={(e) => handleInputChange('nutritionUnit', e.target.value)}
                         placeholder="g, ml, 份等"
                       />
@@ -186,8 +184,9 @@ export function FoodLibraryAddPrompt({
                           <Input
                             id={key}
                             type="number"
-                            step="0.1"
-                            value={value || ''}
+                            step="1"
+                            min={0}
+                            value={value}
                             onChange={(e) => handleNutritionChange(key, e.target.value)}
                             className="text-xs"
                           />
@@ -201,7 +200,7 @@ export function FoodLibraryAddPrompt({
                     <Label htmlFor="sourceText">原始文本</Label>
                     <Input
                       id="sourceText"
-                      value={formData.sourceText}
+                      value={formData.sourceText ?? ""}
                       onChange={(e) => handleInputChange('sourceText', e.target.value)}
                       placeholder="原始输入文本"
                       className="text-xs"

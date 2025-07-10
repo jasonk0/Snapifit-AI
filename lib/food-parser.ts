@@ -94,7 +94,7 @@ export function parseNutritionText(text: string): ParsedNutrition | undefined {
           
           // 千焦转千卡
           if (keyword === '千焦' || keyword === 'kj') {
-            value = value / 4.184;
+            value = Math.round(value / 4.184);
           }
           
           nutrition[key] = value;

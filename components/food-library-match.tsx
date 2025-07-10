@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, X, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFoodLibrary } from '@/hooks/use-food-library';
+import { useFoodLibraryContext } from '@/hooks/FoodLibraryContext';
 import type { FoodLibraryMatch } from '@/lib/types';
 
 interface FoodLibraryMatchProps {
@@ -25,7 +25,9 @@ export function FoodLibraryMatchComponent({
   const [matches, setMatches] = useState<FoodLibraryMatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
-  const { matchFoodItems, incrementUsage } = useFoodLibrary();
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { matchFoodItems, incrementUsage } = useFoodLibraryContext();
   const timeoutRef = useRef<NodeJS.Timeout>();
 
   // 搜索匹配项
@@ -33,29 +35,27 @@ export function FoodLibraryMatchComponent({
     if (!foodName || foodName.length < 1) {
       setMatches([]);
       setVisible(false);
+      setHighlightIndex(0);
       return;
     }
-
-    // 防抖搜索
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-
     timeoutRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         const results = await matchFoodItems(foodName, 5);
         setMatches(results);
         setVisible(results.length > 0);
+        setHighlightIndex(0);
       } catch (error) {
-        console.error('Search matches error:', error);
         setMatches([]);
         setVisible(false);
+        setHighlightIndex(0);
       } finally {
         setLoading(false);
       }
     }, 300);
-
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -63,10 +63,33 @@ export function FoodLibraryMatchComponent({
     };
   }, [foodName, matchFoodItems]);
 
+  // 键盘事件处理
+  useEffect(() => {
+    if (!visible) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        setHighlightIndex((prev) => Math.min(prev + 1, matches.length - 1));
+        e.preventDefault();
+      } else if (e.key === 'ArrowUp') {
+        setHighlightIndex((prev) => Math.max(prev - 1, 0));
+        e.preventDefault();
+      } else if (e.key === 'Enter') {
+        if (matches[highlightIndex]) {
+          handleSelect(matches[highlightIndex]);
+          e.preventDefault();
+        }
+      } else if (e.key === 'Escape') {
+        handleDismiss();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [visible, matches, highlightIndex]);
+
   const handleSelect = async (match: FoodLibraryMatch) => {
-    // 增加使用次数
     await incrementUsage(match.foodItem.id);
-    onSelect(match);
+    onSelect(match); // match.foodItem 包含完整营养信息
     setVisible(false);
   };
 
@@ -80,7 +103,7 @@ export function FoodLibraryMatchComponent({
   }
 
   return (
-    <Card className={cn(
+    <Card ref={containerRef} className={cn(
       "absolute z-50 w-full mt-1 shadow-lg border-2 border-blue-200 bg-white dark:bg-gray-800",
       className
     )}>
@@ -112,8 +135,13 @@ export function FoodLibraryMatchComponent({
             {matches.map((match, index) => (
               <div
                 key={match.foodItem.id}
-                className="flex items-center justify-between p-2 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                className={cn(
+                  "flex items-center justify-between p-2 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors",
+                  index === highlightIndex && "bg-blue-100 dark:bg-blue-900"
+                )}
                 onClick={() => handleSelect(match)}
+                tabIndex={0}
+                onMouseEnter={() => setHighlightIndex(index)}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">

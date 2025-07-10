@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FoodLibraryMatchComponent } from './food-library-match';
 import { FoodLibraryAddPrompt } from './food-library-add-prompt';
-import { useFoodLibrary } from '@/hooks/use-food-library';
+import { useFoodLibraryContext } from '@/hooks/FoodLibraryContext';
 import { detectInputPattern } from '@/lib/food-parser';
 import type { FoodLibraryMatch, FoodItem, ParseContext } from '@/lib/types';
 
@@ -35,7 +35,7 @@ export function EnhancedFoodInput({
   const [dismissedSegments, setDismissedSegments] = useState<Set<string>>(new Set());
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { parseText } = useFoodLibrary();
+  const { parseText } = useFoodLibraryContext();
 
   // 检测输入模式
   useEffect(() => {

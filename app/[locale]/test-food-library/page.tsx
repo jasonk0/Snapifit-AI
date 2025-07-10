@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EnhancedFoodInput } from '@/components/enhanced-food-input';
-import { useFoodLibrary } from '@/hooks/use-food-library';
+import { useFoodLibraryContext } from '@/hooks/FoodLibraryContext';
 import type { FoodLibraryMatch, FoodItem } from '@/lib/types';
 
 export default function TestFoodLibraryPage() {
   const [inputValue, setInputValue] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
-  const { parseText } = useFoodLibrary();
+  const { parseText } = useFoodLibraryContext();
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);

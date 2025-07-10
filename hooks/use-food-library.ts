@@ -1,10 +1,13 @@
 import { useState, useCallback } from 'react';
+import React from 'react';
 import type {
   FoodItem,
   FoodLibraryMatch,
   FoodLibrarySearchParams,
   ParseContext
 } from '@/lib/types';
+import Fuse from 'fuse.js';
+import { parseTextContext } from '@/lib/food-parser';
 
 interface ExportOptions {
   format?: 'json' | 'csv';
@@ -68,12 +71,34 @@ interface UseFoodLibraryReturn {
   reset: () => void;
 }
 
+// 获取 token 辅助函数（放在组件外部，保证稳定引用）
+function getAuthHeaders(): Record<string, string> {
+  const token =  localStorage.getItem('auth_token')
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 export function useFoodLibrary(): UseFoodLibraryReturn {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [allFoodItems, setAllFoodItems] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+
+  // 拉取所有 foodItems 的函数
+  const reloadAllFoodItems = React.useCallback(() => {
+    fetch('/api/db/food-library?all=true', {
+      headers: { ...getAuthHeaders() }
+    })
+      .then(res => res.json())
+      .then(data => setAllFoodItems(data.foodItems || []))
+      // .catch(() => setAllFoodItems([]));
+  }, []);
+
+  // 初始化时只拉取一次
+  React.useEffect(() => {
+    reloadAllFoodItems();
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -87,81 +112,65 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     setHasMore(false);
   }, []);
 
-  // 搜索饮食库项目
+  // 搜索饮食库项目（前端本地筛选）
   const searchFoodItems = useCallback(async (params: FoodLibrarySearchParams) => {
     try {
       setLoading(true);
       setError(null);
 
-      const searchParams = new URLSearchParams();
-      if (params.query) searchParams.set('query', params.query);
-      if (params.category) searchParams.set('category', params.category);
-      if (params.limit) searchParams.set('limit', params.limit.toString());
-      if (params.offset) searchParams.set('offset', params.offset.toString());
-
-      const response = await fetch(`/api/db/food-library?${searchParams}`);
-      
-      if (!response.ok) {
-        throw new Error('搜索饮食库失败');
+      // 本地筛选
+      let filtered = allFoodItems;
+      if (params.query) {
+        const queryLower = params.query.toLowerCase();
+        filtered = filtered.filter(item => item.name.toLowerCase().includes(queryLower));
       }
+      if (params.category) {
+        filtered = filtered.filter(item => item.category === params.category);
+      }
+      const offset = params.offset || 0;
+      const limit = params.limit || 20;
+      const paged = filtered.slice(offset, offset + limit);
 
-      const data = await response.json();
-      
-      if (params.offset === 0) {
-        setFoodItems(data.foodItems);
+      if (offset === 0) {
+        setFoodItems(paged);
       } else {
-        setFoodItems(prev => [...prev, ...data.foodItems]);
+        setFoodItems(prev => [...prev, ...paged]);
       }
-      
-      setTotal(data.total);
-      setHasMore(data.hasMore);
+      setTotal(filtered.length);
+      setHasMore(offset + limit < filtered.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : '搜索饮食库失败');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [allFoodItems]);
 
-  // 匹配饮食库项目
-  const matchFoodItems = useCallback(async (foodName: string, limit = 5): Promise<FoodLibraryMatch[]> => {
-    try {
-      const response = await fetch('/api/db/food-library/match', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ foodName, limit }),
-      });
-
-      if (!response.ok) {
-        throw new Error('匹配饮食库失败');
-      }
-
-      const data = await response.json();
-      return data.matches;
-    } catch (err) {
-      console.error('Match food items error:', err);
-      return [];
+  // 初始化时 allFoodItems 变化后自动触发一次搜索
+  React.useEffect(() => {
+    if (allFoodItems.length > 0) {
+      searchFoodItems({});
     }
-  }, []);
+  }, [allFoodItems, searchFoodItems]);
+
+  // 本地模糊匹配
+  const matchFoodItems = useCallback(async (foodName: string, limit = 5): Promise<FoodLibraryMatch[]> => {
+    if (!foodName) return [];
+    // 用 fuse.js 做模糊匹配
+    const fuse = new Fuse(allFoodItems, { keys: ['name'], threshold: 0.4 });
+    const results = fuse.search(foodName, { limit }) as Array<{ item: FoodItem; score: number }>;
+    return results.map(res => ({
+      foodItem: res.item,
+      matchType: res.score === 0 ? 'exact' : 'partial',
+      similarity: typeof res.score === 'number' ? 1 - res.score : 1,
+    }));
+  }, [allFoodItems]);
 
   // 解析文本
   const parseText = useCallback(async (text: string): Promise<ParseContext | null> => {
     try {
-      const response = await fetch('/api/db/food-library/parse', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error('解析文本失败');
-      }
-
-      const data = await response.json();
-      return data.context;
+      // 直接在前端调用本地 parseTextContext
+      const context = parseTextContext(text);
+      return context;
     } catch (err) {
       console.error('Parse text error:', err);
       return null;
@@ -177,6 +186,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(foodItem),
       });
@@ -187,12 +197,13 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
       }
 
       const data = await response.json();
+      reloadAllFoodItems(); // 新增后刷新本地缓存
       return data.foodItem;
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建饮食库项目失败');
       return null;
     }
-  }, []);
+  }, [reloadAllFoodItems]);
 
   // 更新饮食库项目
   const updateFoodItem = useCallback(async (
@@ -200,53 +211,50 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     updates: Partial<FoodItem>
   ): Promise<FoodItem | null> => {
     try {
-      const response = await fetch('/api/db/food-library', {
+      const response = await fetch(`/api/db/food-library/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
-        body: JSON.stringify({ id, ...updates }),
+        body: JSON.stringify(updates),
       });
 
       if (!response.ok) {
-        throw new Error('更新饮食库项目失败');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '更新饮食库项目失败');
       }
 
       const data = await response.json();
-      
-      // 更新本地状态
-      setFoodItems(prev => 
-        prev.map(item => item.id === id ? data.foodItem : item)
-      );
-
+      reloadAllFoodItems(); // 编辑后刷新本地缓存
       return data.foodItem;
     } catch (err) {
       setError(err instanceof Error ? err.message : '更新饮食库项目失败');
       return null;
     }
-  }, []);
+  }, [reloadAllFoodItems]);
 
   // 删除饮食库项目
   const deleteFoodItem = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/db/food-library?id=${id}`, {
+      const response = await fetch(`/api/db/food-library/${id}`, {
         method: 'DELETE',
+        headers: {
+          ...getAuthHeaders(),
+        },
       });
 
       if (!response.ok) {
         throw new Error('删除饮食库项目失败');
       }
 
-      // 更新本地状态
-      setFoodItems(prev => prev.filter(item => item.id !== id));
-      setTotal(prev => prev - 1);
-
+      reloadAllFoodItems(); // 删除后刷新本地缓存
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除饮食库项目失败');
       return false;
     }
-  }, []);
+  }, [reloadAllFoodItems]);
 
   // 增加使用次数
   const incrementUsage = useCallback(async (foodItemId: string): Promise<boolean> => {
@@ -255,6 +263,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ foodItemId }),
       });
@@ -282,7 +291,11 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
   // 获取分类
   const getCategories = useCallback(async (): Promise<Array<{ name: string; count: number }>> => {
     try {
-      const response = await fetch('/api/db/food-library/categories');
+      const response = await fetch('/api/db/food-library/categories', {
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
       
       if (!response.ok) {
         throw new Error('获取分类失败');
@@ -305,6 +318,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       };
 
       if (aiConfig) {
@@ -339,7 +353,11 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
       if (options.dateFrom) searchParams.set('dateFrom', options.dateFrom);
       if (options.dateTo) searchParams.set('dateTo', options.dateTo);
 
-      const response = await fetch(`/api/db/food-library/export?${searchParams}`);
+      const response = await fetch(`/api/db/food-library/export?${searchParams}`, {
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
 
       if (!response.ok) {
         throw new Error('导出失败');
@@ -373,6 +391,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ foodItems: data, options }),
       });
@@ -397,6 +416,7 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ foodItems: data }),
       });

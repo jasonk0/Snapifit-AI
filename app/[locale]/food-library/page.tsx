@@ -22,9 +22,10 @@ import {
   Utensils
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFoodLibrary } from '@/hooks/use-food-library';
+import { useFoodLibraryContext } from '@/hooks/FoodLibraryContext';
 import { useToast } from '@/hooks/use-toast';
 import type { FoodItem } from '@/lib/types';
+import { AuthGuard } from '@/components/auth-guard';
 
 export default function FoodLibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,12 +66,13 @@ export default function FoodLibraryPage() {
     importFoodItems,
     validateImportData,
     clearError
-  } = useFoodLibrary();
+  } = useFoodLibraryContext();
 
   const { toast } = useToast();
 
   // 初始化加载
   useEffect(() => {
+
     loadFoodItems();
     loadCategories();
   }, []);
@@ -78,11 +80,12 @@ export default function FoodLibraryPage() {
   // 搜索和筛选
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+
       loadFoodItems();
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, foodItems]);
 
   const loadFoodItems = async () => {
     await searchFoodItems({
@@ -210,12 +213,16 @@ export default function FoodLibraryPage() {
       setImportFile(null);
       setImportData(null);
       setImportValidation(null);
+    
+
       loadFoodItems();
       loadCategories();
     }
   };
 
   return (
+
+    <AuthGuard>
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -343,13 +350,13 @@ export default function FoodLibraryPage() {
               </div>
             </div>
             
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select value={selectedCategory || "all"} onValueChange={v => setSelectedCategory(v === "all" ? "" : v)}>
               <SelectTrigger className="w-48">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="选择分类" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">全部分类</SelectItem>
+                <SelectItem value="all">全部分类</SelectItem>
                 {categories.map(cat => (
                   <SelectItem key={cat.name} value={cat.name}>
                     {cat.name} ({cat.count})
@@ -423,6 +430,8 @@ export default function FoodLibraryPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
+
   );
 }
 

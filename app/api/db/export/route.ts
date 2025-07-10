@@ -26,12 +26,34 @@ export const GET = withAuth(async (request) => {
     // 获取所有每日日志
     const dailyLogs = await prisma.dailyLog.findMany({
       where: { userId },
-      include: {
-        foodEntries: true,
-        exerciseEntries: true
-      },
       orderBy: { date: 'asc' }
     })
+
+    // 为每个 dailyLog 查询 foodEntries 和 exerciseEntries
+    const dailyLogsWithEntries = await Promise.all(
+      dailyLogs.map(async (log) => {
+        const foodEntries = await prisma.foodEntry.findMany({
+          where: { userId, logId: log.date },
+        })
+        const exerciseEntries = await prisma.exerciseEntry.findMany({
+          where: { userId, logId: log.date },
+        })
+        return {
+          ...log,
+          tefAnalysis: log.tefAnalysis ? JSON.parse(log.tefAnalysis) : null,
+          dailyStatus: log.dailyStatus ? JSON.parse(log.dailyStatus) : null,
+          foodEntries: foodEntries.map(entry => ({
+            ...entry,
+            nutritionalInfoPer100g: JSON.parse(entry.nutritionalInfoPer100g),
+            totalNutritionalInfoConsumed: JSON.parse(entry.totalNutritionalInfoConsumed)
+          })),
+          exerciseEntries: exerciseEntries.map(entry => ({
+            ...entry,
+            muscleGroups: entry.muscleGroups ? JSON.parse(entry.muscleGroups) : null
+          }))
+        }
+      })
+    )
 
     // 获取 AI 记忆
     const aiMemories = await prisma.aIMemory.findMany({
@@ -53,21 +75,7 @@ export const GET = withAuth(async (request) => {
       },
       user,
       userProfile,
-      dailyLogs: dailyLogs.map(log => ({
-        ...log,
-        // 解析 JSON 字段
-        tefAnalysis: log.tefAnalysis ? JSON.parse(log.tefAnalysis) : null,
-        dailyStatus: log.dailyStatus ? JSON.parse(log.dailyStatus) : null,
-        foodEntries: log.foodEntries.map(entry => ({
-          ...entry,
-          nutritionalInfoPer100g: JSON.parse(entry.nutritionalInfoPer100g),
-          totalNutritionalInfoConsumed: JSON.parse(entry.totalNutritionalInfoConsumed)
-        })),
-        exerciseEntries: log.exerciseEntries.map(entry => ({
-          ...entry,
-          muscleGroups: entry.muscleGroups ? JSON.parse(entry.muscleGroups) : null
-        }))
-      })),
+      dailyLogs: dailyLogsWithEntries,
       aiMemories: aiMemories.map(memory => ({
         ...memory,
         keyInsights: memory.keyInsights ? JSON.parse(memory.keyInsights) : null,
