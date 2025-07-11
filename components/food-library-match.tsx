@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useFoodLibraryContext } from '@/hooks/FoodLibraryContext';
-import type { FoodLibraryMatch } from '@/lib/types';
+import React, { useState, useEffect, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Check, X, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useFoodLibraryContext } from "@/hooks/FoodLibraryContext";
+import type { FoodLibraryMatch } from "@/lib/types";
 
 interface FoodLibraryMatchProps {
   foodName: string;
@@ -16,11 +16,11 @@ interface FoodLibraryMatchProps {
   className?: string;
 }
 
-export function FoodLibraryMatchComponent({ 
-  foodName, 
-  onSelect, 
-  onDismiss, 
-  className 
+export function FoodLibraryMatchComponent({
+  foodName,
+  onSelect,
+  onDismiss,
+  className,
 }: FoodLibraryMatchProps) {
   const [matches, setMatches] = useState<FoodLibraryMatch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +38,12 @@ export function FoodLibraryMatchComponent({
       setHighlightIndex(0);
       return;
     }
+
+    // 如果foodName包含」字符，说明输入已结束，维持当前匹配结果不再搜索
+    if (foodName.includes("」")) {
+      return;
+    }
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -67,28 +73,28 @@ export function FoodLibraryMatchComponent({
   useEffect(() => {
     if (!visible) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         setHighlightIndex((prev) => Math.min(prev + 1, matches.length - 1));
         e.preventDefault();
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         setHighlightIndex((prev) => Math.max(prev - 1, 0));
         e.preventDefault();
-      } else if (e.key === 'Enter') {
+      } else if (e.key === "Enter") {
         if (matches[highlightIndex]) {
           handleSelect(matches[highlightIndex]);
           e.preventDefault();
         }
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         handleDismiss();
         e.preventDefault();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [visible, matches, highlightIndex]);
 
   const handleSelect = async (match: FoodLibraryMatch) => {
-    await incrementUsage(match.foodItem.id);
+    // 不在这里增加使用次数，只有在真正保存到日志时才增加
     onSelect(match); // match.foodItem 包含完整营养信息
     setVisible(false);
   };
@@ -103,10 +109,13 @@ export function FoodLibraryMatchComponent({
   }
 
   return (
-    <Card ref={containerRef} className={cn(
-      "absolute z-50 w-full mt-1 shadow-lg border-2 border-blue-200 bg-white dark:bg-gray-800",
-      className
-    )}>
+    <Card
+      ref={containerRef}
+      className={cn(
+        "absolute z-50 w-full mt-1 shadow-lg border-2 border-blue-200 bg-white dark:bg-gray-800",
+        className
+      )}
+    >
       <CardContent className="p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -148,20 +157,28 @@ export function FoodLibraryMatchComponent({
                     <span className="font-medium text-sm truncate">
                       {match.foodItem.name}
                     </span>
-                    <Badge 
+                    <Badge
                       variant={
-                        match.matchType === 'exact' ? 'default' :
-                        match.matchType === 'partial' ? 'secondary' : 'outline'
+                        match.matchType === "exact"
+                          ? "default"
+                          : match.matchType === "partial"
+                          ? "secondary"
+                          : "outline"
                       }
                       className="text-xs"
                     >
-                      {match.matchType === 'exact' ? '完全匹配' :
-                       match.matchType === 'partial' ? '部分匹配' : '模糊匹配'}
+                      {match.matchType === "exact"
+                        ? "完全匹配"
+                        : match.matchType === "partial"
+                        ? "部分匹配"
+                        : "模糊匹配"}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>
-                      {match.foodItem.nutrition.calories}千卡/{match.foodItem.nutritionPer}{match.foodItem.nutritionUnit}
+                      {match.foodItem.nutrition.calories}千卡/
+                      {match.foodItem.nutritionPer}
+                      {match.foodItem.nutritionUnit}
                     </span>
                     {match.foodItem.category && (
                       <Badge variant="outline" className="text-xs">
@@ -176,11 +193,7 @@ export function FoodLibraryMatchComponent({
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 ml-2"
-                >
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
                   <Check className="h-3 w-3" />
                 </Button>
               </div>

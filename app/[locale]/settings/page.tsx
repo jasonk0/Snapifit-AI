@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,8 +26,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
+
 import { useAIMemoryServer } from "@/hooks/use-ai-memory-server";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
 import { useUserProfileServer } from "@/hooks/use-user-profile-server";
@@ -44,7 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, UploadCloud } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/hooks/use-i18n";
 import { AuthGuard } from "@/components/auth-guard";
 
@@ -120,16 +119,8 @@ function SettingsContent() {
       : "profile";
   });
 
-  const { getAllDailyLogs } = useDailyLogCache();
-  const {
-    memories,
-    updateMemory,
-    clearMemory,
-    clearAllMemories,
-    loadMemories,
-    getAllMemories: getAllServerMemories,
-  } = useAIMemoryServer();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { memories, updateMemory, clearMemory, clearAllMemories } =
+    useAIMemoryServer();
 
   // 记忆编辑状态管理
   const [editingMemories, setEditingMemories] = useState<
@@ -579,164 +570,6 @@ function SettingsContent() {
     [aiFormData, toast]
   );
 
-  // 导出所有数据
-  const handleExportData = useCallback(async () => {
-    try {
-      // 获取所有健康日志
-      const healthLogsArray = await getAllDailyLogs();
-      const healthLogs: Record<string, any> = {};
-      healthLogsArray.forEach((log) => {
-        healthLogs[log.date] = log;
-      });
-
-      // 获取AI记忆数据
-      let aiMemories: Record<string, any> = {};
-      try {
-        const memoriesArray = await getAllServerMemories();
-        memoriesArray.forEach((memory) => {
-          aiMemories[memory.expertId] = memory;
-        });
-      } catch (error) {
-        console.warn("获取服务端AI记忆失败，尝试从本地获取:", error);
-        // 如果服务端获取失败，尝试从本地IndexedDB获取
-        aiMemories = memories;
-      }
-
-      // 创建导出对象
-      const exportData = {
-        userProfile,
-        aiConfig: currentAIConfig,
-        healthLogs,
-        aiMemories,
-      };
-
-      // 创建并下载 JSON 文件
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataUri =
-        "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-
-      const exportFileDefaultName = `health-data-${new Date()
-        .toISOString()
-        .slice(0, 10)}.json`;
-
-      const linkElement = document.createElement("a");
-      linkElement.setAttribute("href", dataUri);
-      linkElement.setAttribute("download", exportFileDefaultName);
-      linkElement.click();
-
-      // 记录导出时间
-      localStorage.setItem("lastExportTime", new Date().toISOString());
-
-      toast({
-        title: t("data.exportSuccessTitle"),
-        description: t("data.exportSuccessDescription"),
-      });
-    } catch (error) {
-      console.error("导出数据失败:", error);
-      toast({
-        title: t("data.exportErrorTitle"),
-        description: t("data.exportErrorDescription"),
-        variant: "destructive",
-      });
-    }
-  }, [
-    userProfile,
-    currentAIConfig,
-    getAllDailyLogs,
-    getAllServerMemories,
-    memories,
-    toast,
-  ]);
-
-  // 导入数据
-  const handleImportData = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const content = e.target?.result as string;
-          const importedData = JSON.parse(content);
-
-          // 验证导入的数据格式
-          if (!importedData.userProfile || !importedData.healthLogs) {
-            throw new Error("无效的数据格式");
-          }
-
-          // 使用数据迁移API导入数据到服务端
-          const response = await fetch("/api/db/migrate-indexeddb", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              indexedDBData: importedData,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error("数据导入失败");
-          }
-
-          const result = await response.json();
-          console.log("数据导入结果:", result);
-
-          // 更新服务端状态
-          await saveUserProfileServer(importedData.userProfile);
-          if (importedData.aiConfig) {
-            await setAIConfig(importedData.aiConfig);
-          }
-
-          toast({
-            title: t("data.importSuccessTitle"),
-            description: t("data.importSuccessDescription"),
-          });
-
-          // 重置文件输入
-          if (event.target) {
-            (event.target as HTMLInputElement).value = "";
-          }
-        } catch (error) {
-          console.error("导入数据失败:", error);
-          toast({
-            title: t("data.importErrorTitle"),
-            description: t("data.importErrorDescription"),
-            variant: "destructive",
-          });
-        }
-      };
-
-      reader.readAsText(file);
-    },
-    [saveUserProfileServer, setAIConfig, toast]
-  );
-
-  // 清空所有数据
-  const handleClearAllData = useCallback(async () => {
-    try {
-      // 清空 AI 记忆
-      await clearAllMemories();
-
-      // 重置用户配置和 AI 配置到默认值
-      await saveUserProfileServer(defaultUserProfile);
-      await setAIConfig(defaultAIConfig);
-
-      toast({
-        title: t("data.clearSuccessTitle"),
-        description: t("data.clearSuccessDescription"),
-      });
-    } catch (error) {
-      console.error("清除数据失败:", error);
-      toast({
-        title: t("data.clearErrorTitle"),
-        description: t("data.clearErrorDescription"),
-        variant: "destructive",
-      });
-    }
-  }, [clearAllMemories, saveUserProfileServer, setAIConfig, toast]);
-
   // 渲染模型选择器
   const renderModelSelector = useCallback(
     (modelType: keyof AIConfig, models: OpenAIModel[], isLoading: boolean) => {
@@ -808,7 +641,7 @@ function SettingsContent() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-4 h-14 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-3 h-14 bg-muted/50">
           <TabsTrigger
             value="profile"
             className="text-sm sm:text-base py-2 px-2 sm:px-4 flex-col sm:flex-row gap-1 sm:gap-2 min-w-0"
@@ -826,12 +659,6 @@ function SettingsContent() {
             className="text-xs sm:text-sm py-3 sm:py-2.5 px-1.5 sm:px-4 min-w-0 flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 transition-all duration-200 touch-manipulation"
           >
             <span className="truncate font-medium">{t("tabs.ai")}</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="data"
-            className="text-xs sm:text-sm py-3 sm:py-2.5 px-1.5 sm:px-4 min-w-0 flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 transition-all duration-200 touch-manipulation"
-          >
-            <span className="truncate font-medium">{t("tabs.data")}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1601,80 +1428,6 @@ function SettingsContent() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        {/* 数据管理 */}
-        <TabsContent value="data" className="mt-6 focus-visible:outline-none">
-          <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>{t("data.title")}</CardTitle>
-              <CardDescription>{t("data.description")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">{t("data.exportData")}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("data.exportDescription")}
-                </p>
-                <Button onClick={handleExportData}>
-                  {t("data.exportAllData")}
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">{t("data.importData")}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("data.importDescription")}
-                </p>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleImportData}
-                    className="hidden"
-                    ref={fileInputRef}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <UploadCloud className="mr-2 h-4 w-4" />
-                    {t("data.selectFile")}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">{t("data.clearData")}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("data.clearDescription")}
-                </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                      {t("data.clearAllData")}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {t("data.confirmClearTitle")}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t("data.confirmClearDescription")}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t("data.cancel")}</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearAllData}>
-                        {t("data.confirmClear")}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 

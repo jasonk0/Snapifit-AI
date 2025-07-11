@@ -37,9 +37,19 @@ export const GET = withAuth(async (request) => {
           }),
         ]);
 
+        // 如果日志中的activityLevel为空，从用户配置中获取默认值
+        let finalActivityLevel = dailyLog.activityLevel;
+        if (!finalActivityLevel) {
+          const userProfile = await prisma.userProfile.findUnique({
+            where: { userId },
+          });
+          finalActivityLevel = userProfile?.activityLevel || "moderate";
+        }
+
         // 动态计算summary并返回
         const logWithSummary = withCalculatedSummary({
           ...dailyLog,
+          activityLevel: finalActivityLevel,
           foodEntries,
           exerciseEntries,
         });

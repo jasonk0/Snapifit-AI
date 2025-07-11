@@ -69,16 +69,6 @@ export function MainNav() {
       href: `/${locale}/test-food-library`,
       icon: Utensils,
     },
-    {
-      name: "数据管理",
-      href: `/${locale}/data-migration`,
-      icon: Database,
-    },
-    {
-      name: t("settings"),
-      href: `/${locale}/settings`,
-      icon: Settings,
-    },
   ];
 
   return (
@@ -157,6 +147,19 @@ export function MainNav() {
                   className="text-xs text-muted-foreground"
                 >
                   {user.username}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/${locale}/settings`}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    设置
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/${locale}/data-migration`}>
+                    <Database className="h-4 w-4 mr-2" />
+                    数据管理
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

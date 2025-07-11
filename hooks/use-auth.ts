@@ -1,145 +1,163 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from "react";
 
 interface User {
-  id: string
-  username: string
-  createdAt: string
+  id: string;
+  username: string;
+  createdAt: string;
 }
 
 interface AuthContextType {
-  user: User | null
-  token: string | null
-  isLoading: boolean
-  isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<void>
-  register: (username: string, password: string, inviteCode: string) => Promise<void>
-  logout: () => void
-  refreshUser: () => Promise<void>
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (
+    username: string,
+    password: string,
+    inviteCode: string
+  ) => Promise<void>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }
 
 export function useAuthProvider(): AuthContextType {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!user && !!token
+  const isAuthenticated = !!user && !!token;
 
   // 从 localStorage 加载 token
   useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token')
+    const savedToken = localStorage.getItem("auth_token");
     if (savedToken) {
-      setToken(savedToken)
+      setToken(savedToken);
       // 验证 token 并获取用户信息
-      refreshUser(savedToken)
+      refreshUser(savedToken);
     } else {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   // 刷新用户信息
   const refreshUser = useCallback(async (authToken?: string) => {
-    const currentToken = authToken || token
+    // 如果没有传入token，从localStorage获取
+    const currentToken = authToken || localStorage.getItem("auth_token");
     if (!currentToken) {
-      setIsLoading(false)
-      return
+      setIsLoading(false);
+      return;
     }
 
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch("/api/auth/me", {
         headers: {
-          'Authorization': `Bearer ${currentToken}`
-        }
-      })
+          Authorization: `Bearer ${currentToken}`,
+        },
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        setUser(data.user)
+        const data = await response.json();
+        setUser(data.user);
+        // 确保token状态与localStorage同步
+        if (!authToken) {
+          setToken(currentToken);
+        }
       } else {
         // Token 无效，清除本地存储
-        localStorage.removeItem('auth_token')
-        setToken(null)
-        setUser(null)
+        localStorage.removeItem("auth_token");
+        setToken(null);
+        setUser(null);
       }
     } catch (error) {
-      console.error('Failed to refresh user:', error)
-      localStorage.removeItem('auth_token')
-      setToken(null)
-      setUser(null)
+      console.error("Failed to refresh user:", error);
+      localStorage.removeItem("auth_token");
+      setToken(null);
+      setUser(null);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [token])
+  }, []);
 
   // 登录
   const login = useCallback(async (username: string, password: string) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password })
-      })
+        body: JSON.stringify({ username, password }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        setToken(data.token)
-        setUser(data.user)
-        localStorage.setItem('auth_token', data.token)
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem("auth_token", data.token);
       } else {
-        throw new Error(data.error || '登录失败')
+        throw new Error(data.error || "登录失败");
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   // 注册
-  const register = useCallback(async (username: string, password: string, inviteCode: string) => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password, inviteCode })
-      })
+  const register = useCallback(
+    async (username: string, password: string, inviteCode: string) => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password, inviteCode }),
+        });
 
-      const data = await response.json()
+        const data = await response.json();
 
-      if (response.ok) {
-        setToken(data.token)
-        setUser(data.user)
-        localStorage.setItem('auth_token', data.token)
-      } else {
-        throw new Error(data.error || '注册失败')
+        if (response.ok) {
+          setToken(data.token);
+          setUser(data.user);
+          localStorage.setItem("auth_token", data.token);
+        } else {
+          throw new Error(data.error || "注册失败");
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+    },
+    []
+  );
 
   // 登出
   const logout = useCallback(() => {
-    setUser(null)
-    setToken(null)
-    localStorage.removeItem('auth_token')
-  }, [])
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("auth_token");
+  }, []);
 
   return {
     user,
@@ -149,8 +167,8 @@ export function useAuthProvider(): AuthContextType {
     login,
     register,
     logout,
-    refreshUser: () => refreshUser()
-  }
+    refreshUser: () => refreshUser(),
+  };
 }
 
-export { AuthContext }
+export { AuthContext };

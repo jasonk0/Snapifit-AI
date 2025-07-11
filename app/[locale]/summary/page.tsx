@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "@/hooks/use-i18n";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
+import { useUserProfileServer } from "@/hooks/use-user-profile-server";
 import { useToast } from "@/hooks/use-toast";
 import type {
   DailyLog,
@@ -65,7 +66,9 @@ function SummaryPageContent({
   const tDashboard = useTranslation("dashboard");
   const { toast } = useToast();
   const { theme } = useTheme();
-  const [userProfile] = useLocalStorage("userProfile", defaultUserProfile);
+  // 获取用户配置 - 使用服务器端存储
+  const { userProfile: serverUserProfile } = useUserProfileServer();
+  const userProfile = serverUserProfile || defaultUserProfile;
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dailyLog, setDailyLog] = useState<DailyLog | null>(null);
   const [smartSuggestions, setSmartSuggestions] =

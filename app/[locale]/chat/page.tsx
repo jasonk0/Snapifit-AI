@@ -15,6 +15,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
 import { useAIMemoryServer } from "@/hooks/use-ai-memory-server";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
+import { useUserProfileServer } from "@/hooks/use-user-profile-server";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { EnhancedMessageRenderer } from "@/components/enhanced-message-renderer";
 import { LocalStorageDebug } from "@/components/debug/localStorage-debug";
@@ -339,7 +340,9 @@ export default function ChatPage() {
   const [showExpertDropdown, setShowExpertDropdown] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
-  const [userProfile] = useLocalStorage("userProfile", {});
+  // 获取用户配置 - 使用服务器端存储
+  const { userProfile: serverUserProfile } = useUserProfileServer();
+  const userProfile = serverUserProfile || {};
 
   // 获取AI配置 - 使用服务器端存储
   const { aiConfig } = useAIConfigServer();

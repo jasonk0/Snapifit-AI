@@ -76,6 +76,7 @@ import { EnhancedFoodInput } from "@/components/enhanced-food-input";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDailyLogCache } from "@/hooks/use-daily-log-cache";
 import { useAIConfigServer } from "@/hooks/use-ai-config-server";
+import { useUserProfileServer } from "@/hooks/use-user-profile-server";
 import { useExportReminder } from "@/hooks/use-export-reminder";
 import { useDateRecords } from "@/hooks/use-date-records";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -137,8 +138,11 @@ export default function Dashboard({
   const [uploadedImages, setUploadedImages] = useState<ImagePreview[]>([]);
   const [isCompressing, setIsCompressing] = useState(false);
 
-  // 使用本地存储钩子获取用户配置
-  const [userProfile] = useLocalStorage("userProfile", {
+  // 获取用户配置 - 使用服务器端存储
+  const { userProfile: serverUserProfile, isLoading: userProfileLoading } =
+    useUserProfileServer();
+  // 优先使用服务端配置，如果没有则使用本地配置
+  const userProfile = serverUserProfile || {
     weight: 70,
     height: 170,
     age: 30,
@@ -146,7 +150,7 @@ export default function Dashboard({
     activityLevel: "moderate",
     goal: "maintain",
     bmrFormula: "mifflin-st-jeor" as "mifflin-st-jeor",
-  });
+  };
 
   // 获取AI配置 - 使用服务器端存储
   const { aiConfig } = useAIConfigServer();
@@ -179,8 +183,13 @@ export default function Dashboard({
   );
 
   // 使用服务端存储钩子获取日志数据（带缓存）
-  const { getDailyLog, getBatchDailyLogs, saveDailyLog, isLoading } =
-    useDailyLogCache();
+  const {
+    getDailyLog,
+    getBatchDailyLogs,
+    saveDailyLog,
+    isLoading,
+    clearCache,
+  } = useDailyLogCache();
 
   // 防抖保存机制
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -246,22 +255,20 @@ export default function Dashboard({
 
   // 当选择的日期变化时，加载对应日期的数据
   useEffect(() => {
-    // 只有在认证完成且已登录时才加载数据
-    if (authLoading || !isAuthenticated) {
+    // 只有在认证完成且已登录，并且用户配置加载完成时才加载数据
+    if (authLoading || !isAuthenticated || userProfileLoading) {
       return;
     }
 
     const dateKey = format(selectedDate, "yyyy-MM-dd");
     getDailyLog(dateKey)
       .then((data) => {
-        console.log("从服务端读取到的数据：", data);
         const defaultActivity = userProfile.activityLevel || "moderate";
         if (data) {
           setDailyLog(data);
           setCurrentDayWeight(data.weight ? data.weight.toString() : "");
-          setCurrentDayActivityLevelForSelect(
-            data.activityLevel || defaultActivity
-          );
+          const selectedActivity = data.activityLevel || defaultActivity;
+          setCurrentDayActivityLevelForSelect(selectedActivity);
         } else {
           setDailyLog({
             date: dateKey,
@@ -310,6 +317,7 @@ export default function Dashboard({
     userActivityLevel,
     authLoading,
     isAuthenticated,
+    userProfileLoading,
   ]);
 
   // 辅助 useEffect 来监控 dailyLog 状态的变化
@@ -893,25 +901,43 @@ export default function Dashboard({
         result = await response.json();
       }
 
-      const updatedLog = { ...dailyLog };
-
-      if (activeTab === "food" && result.food) {
-        updatedLog.foodEntries = [...updatedLog.foodEntries, ...result.food];
-        // 记录已在后端保存，无需手动保存
-      } else if (activeTab === "exercise" && result.exercise) {
-        updatedLog.exerciseEntries = [
-          ...updatedLog.exerciseEntries,
-          ...result.exercise,
-        ];
-        // 记录已在后端保存，无需手动保存
-      }
-
-      setDailyLog(updatedLog);
-      saveDailyLog(updatedLog.date, extractDailyLogFields(updatedLog)).catch(
-        (error) => {
-          console.error("保存日志数据失败：", error);
+      // 添加条目后，清除缓存并重新从服务端获取最新数据（包含动态计算的summary）
+      try {
+        // 清除缓存以确保获取最新数据
+        clearCache();
+        const latestData = await getDailyLog(dailyLog.date);
+        if (latestData) {
+          setDailyLog(latestData);
+        } else {
+          // 如果获取失败，使用本地更新的数据作为备选
+          const updatedLog = { ...dailyLog };
+          if (activeTab === "food" && result.food) {
+            updatedLog.foodEntries = [
+              ...updatedLog.foodEntries,
+              ...result.food,
+            ];
+          } else if (activeTab === "exercise" && result.exercise) {
+            updatedLog.exerciseEntries = [
+              ...updatedLog.exerciseEntries,
+              ...result.exercise,
+            ];
+          }
+          setDailyLog(updatedLog);
         }
-      );
+      } catch (error) {
+        console.error("重新获取日志数据失败：", error);
+        // 如果获取失败，使用本地更新的数据作为备选
+        const updatedLog = { ...dailyLog };
+        if (activeTab === "food" && result.food) {
+          updatedLog.foodEntries = [...updatedLog.foodEntries, ...result.food];
+        } else if (activeTab === "exercise" && result.exercise) {
+          updatedLog.exerciseEntries = [
+            ...updatedLog.exerciseEntries,
+            ...result.exercise,
+          ];
+        }
+        setDailyLog(updatedLog);
+      }
       //  TODO
       // 触发图表刷新
       setChartRefreshTrigger((prev) => prev + 1);
@@ -990,13 +1016,20 @@ export default function Dashboard({
       );
     }
 
-    // summary现在由服务端动态计算，无需手动重新计算
-    setDailyLog(updatedLog);
-    saveDailyLog(updatedLog.date, extractDailyLogFields(updatedLog)).catch(
-      (error) => {
-        console.error("删除条目后保存失败：", error);
+    // 删除条目后，清除缓存并重新获取最新数据
+    try {
+      clearCache();
+      const latestData = await getDailyLog(updatedLog.date);
+      if (latestData) {
+        setDailyLog(latestData);
+      } else {
+        setDailyLog(updatedLog);
       }
-    );
+    } catch (error) {
+      console.error("重新获取日志数据失败：", error);
+      setDailyLog(updatedLog);
+    }
+
     // 触发图表刷新
     setChartRefreshTrigger((prev) => prev + 1);
     // 刷新日期记录状态
@@ -1071,13 +1104,20 @@ export default function Dashboard({
       );
     }
 
-    // summary现在由服务端动态计算，无需手动重新计算
-    setDailyLog(updatedLog);
-    saveDailyLog(updatedLog.date, extractDailyLogFields(updatedLog)).catch(
-      (error) => {
-        console.error("更新条目后保存失败：", error);
+    // 更新条目后，清除缓存并重新获取最新数据
+    try {
+      clearCache();
+      const latestData = await getDailyLog(updatedLog.date);
+      if (latestData) {
+        setDailyLog(latestData);
+      } else {
+        setDailyLog(updatedLog);
       }
-    );
+    } catch (error) {
+      console.error("重新获取日志数据失败：", error);
+      setDailyLog(updatedLog);
+    }
+
     // 触发图表刷新
     setChartRefreshTrigger((prev) => prev + 1);
     // 刷新日期记录状态
@@ -1543,11 +1583,11 @@ export default function Dashboard({
                     className="min-h-[140px] text-base p-6 rounded-xl"
                     onFoodLibrarySelect={(match) => {
                       // 处理饮食库选择
-                      console.log('Selected from food library:', match);
+                      console.log("Selected from food library:", match);
                     }}
                     onFoodLibraryAdd={(foodItem) => {
                       // 处理添加到饮食库
-                      console.log('Added to food library:', foodItem);
+                      console.log("Added to food library:", foodItem);
                     }}
                   />
                 ) : (
