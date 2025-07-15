@@ -28,7 +28,6 @@ export const POST = withAuth(async (request: NextRequest) => {
     
     for (const item of allFoodItems) {
       const similarity = fuzzyMatchFoodName(foodName, item.name);
-      
       if (similarity > 0) {
         let matchType: 'exact' | 'partial' | 'fuzzy';
         

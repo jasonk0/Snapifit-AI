@@ -98,7 +98,8 @@ export default function FoodLibraryPage() {
 
   const loadCategories = async () => {
     const cats = await getCategories();
-    setCategories(cats);
+    
+    setCategories(cats.filter(cat => cat.name !== ''));
   };
 
   const handleCreateItem = async () => {

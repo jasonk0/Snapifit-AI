@@ -182,15 +182,15 @@ export function useFoodLibrary(): UseFoodLibraryReturn {
     async (foodName: string, limit = 5): Promise<FoodLibraryMatch[]> => {
       if (!foodName) return [];
       // 用 fuse.js 做模糊匹配
-      const fuse = new Fuse(allFoodItems, { keys: ["name"], threshold: 0.4 });
-      const results = fuse.search(foodName, { limit }) as Array<{
+      const fuse = new Fuse(allFoodItems, { keys: ["name"], threshold: 0.4, includeScore: true  });
+      const results = fuse.search(foodName, { limit}) as Array<{
         item: FoodItem;
         score: number;
       }>;
       return results.map((res) => ({
         foodItem: res.item,
-        matchType: res.score === 0 ? "exact" : "partial",
-        similarity: typeof res.score === "number" ? 1 - res.score : 1,
+        matchType: (res.score ).toFixed(2) == "0.00" ? "exact" : "partial",
+        similarity: parseFloat((1 - res.score).toFixed(2)),
       }));
     },
     [allFoodItems]

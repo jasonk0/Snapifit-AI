@@ -198,7 +198,7 @@ export function FoodLibraryMatchComponent({
                 </Button>
               </div>
             ))}
-            <div className="pt-2 border-t">
+            {/* <div className="pt-2 border-t">
               <Button
                 variant="ghost"
                 size="sm"
@@ -207,7 +207,7 @@ export function FoodLibraryMatchComponent({
               >
                 继续手动输入
               </Button>
-            </div>
+            </div> */}
           </div>
         ) : (
           <div className="text-center py-3">

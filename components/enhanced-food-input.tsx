@@ -19,6 +19,14 @@ interface EnhancedFoodInputProps {
   disabled?: boolean;
 }
 
+// 待匹配的食物项类型
+interface PendingFoodMatch {
+  foodName: string;
+  startIndex: number;
+  endIndex: number;
+  status: 'pending' | 'confirmed' | 'dismissed';
+}
+
 export function EnhancedFoodInput({
   value,
   onChange,
@@ -29,23 +37,23 @@ export function EnhancedFoodInput({
   disabled,
 }: EnhancedFoodInputProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
-  const [showLibraryMatch, setShowLibraryMatch] = useState(false);
-  const [currentFood, setCurrentFood] = useState("");
   const [parseContext, setParseContext] = useState<ParseContext | null>(null);
   const [dismissedSegments, setDismissedSegments] = useState<Set<string>>(
     new Set()
   );
-  const [justSelected, setJustSelected] = useState(false); // 新增：标记刚刚选择了匹配项
-  const isSelectingRef = useRef(false); // 用于跟踪是否正在处理选择操作
+  const [justSelected, setJustSelected] = useState(false);
+  const isSelectingRef = useRef(false);
+  
+  // 新增：跟踪所有待匹配的食物项
+  const [pendingMatches, setPendingMatches] = useState<PendingFoodMatch[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { parseText } = useFoodLibraryContext();
 
-  // 检测输入模式
+  // 检测文本中所有的食物匹配项
   useEffect(() => {
     if (!value) {
-      setShowLibraryMatch(false);
-      setCurrentFood("");
+      setPendingMatches([]);
       setParseContext(null);
       setJustSelected(false);
       return;
@@ -57,16 +65,39 @@ export function EnhancedFoodInput({
       return;
     }
 
-    const pattern = detectInputPattern(value, cursorPosition);
-
-    // 显示饮食库匹配
-    if (pattern.shouldShowLibraryMatch && pattern.currentFood) {
-      setCurrentFood(pattern.currentFood);
-      setShowLibraryMatch(true);
-    } else {
-      setShowLibraryMatch(false);
-      setCurrentFood("");
+    // 使用正则表达式查找所有「食物」模式
+    const foodMatches: PendingFoodMatch[] = [];
+    const regex = /「([^」]+)」/g;
+    let match;
+    
+    while ((match = regex.exec(value)) !== null) {
+      const foodName = match[1];
+      if (foodName && foodName.trim().length > 0) {
+        foodMatches.push({
+          foodName: foodName.trim(),
+          startIndex: match.index,
+          endIndex: match.index + match[0].length,
+          status: 'pending'
+        });
+      }
     }
+
+    // 更新待匹配食物列表，保留已确认/已忽略的状态
+    setPendingMatches(prevMatches => {
+      // 保留之前已确认或已忽略的匹配项状态
+      const statusMap = new Map(
+        prevMatches.map(item => [`${item.startIndex}-${item.endIndex}-${item.foodName}`, item.status])
+      );
+      
+      return foodMatches.map(match => {
+        const key = `${match.startIndex}-${match.endIndex}-${match.foodName}`;
+        const previousStatus = statusMap.get(key);
+        return {
+          ...match,
+          status: previousStatus || 'pending'
+        };
+      });
+    });
 
     // 解析整个文本以检测营养信息
     parseText(value)
@@ -76,7 +107,7 @@ export function EnhancedFoodInput({
         }
       })
       .catch(console.error);
-  }, [value, cursorPosition, parseText, justSelected]);
+  }, [value, parseText, justSelected]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -95,7 +126,7 @@ export function EnhancedFoodInput({
     }, 0);
   };
 
-  const handleLibrarySelect = (match: FoodLibraryMatch) => {
+  const handleLibrarySelect = (match: FoodLibraryMatch, pendingMatch: PendingFoodMatch) => {
     // 设置标志，防止重新触发匹配
     isSelectingRef.current = true;
     setJustSelected(true);
@@ -118,18 +149,21 @@ export function EnhancedFoodInput({
     const fullText = `「${foodItem.name}」（每${foodItem.nutritionPer}${foodItem.nutritionUnit}：${nutritionText}）`;
 
     // 替换当前「食物名称」为完整的食物信息
-    const beforeCursor = value.substring(0, cursorPosition);
-    const afterCursor = value.substring(cursorPosition);
+    const beforeMatch = value.substring(0, pendingMatch.startIndex);
+    const afterMatch = value.substring(pendingMatch.endIndex);
+    const newValue = beforeMatch + fullText + afterMatch;
 
-    const lastQuoteStart = beforeCursor.lastIndexOf("「");
-    if (lastQuoteStart !== -1) {
-      const newValue =
-        value.substring(0, lastQuoteStart) + fullText + afterCursor;
+    onChange(newValue);
 
-      onChange(newValue);
-    }
+    // 更新匹配项状态为已确认
+    setPendingMatches(prevMatches => 
+      prevMatches.map(item => 
+        (item.startIndex === pendingMatch.startIndex && item.endIndex === pendingMatch.endIndex) 
+          ? { ...item, status: 'confirmed' as const } 
+          : item
+      )
+    );
 
-    setShowLibraryMatch(false);
     onFoodLibrarySelect?.(match);
   };
 
@@ -137,8 +171,15 @@ export function EnhancedFoodInput({
     onFoodLibraryAdd?.(foodItem);
   };
 
-  const handleDismissMatch = () => {
-    setShowLibraryMatch(false);
+  const handleDismissMatch = (pendingMatch: PendingFoodMatch) => {
+    // 更新匹配项状态为已忽略
+    setPendingMatches(prevMatches => 
+      prevMatches.map(item => 
+        (item.startIndex === pendingMatch.startIndex && item.endIndex === pendingMatch.endIndex) 
+          ? { ...item, status: 'dismissed' as const } 
+          : item
+      )
+    );
   };
 
   const handleDismissAddPrompt = (segmentKey: string) => {
@@ -157,15 +198,20 @@ export function EnhancedFoodInput({
         disabled={disabled}
       />
 
-      {/* 饮食库匹配提示 */}
-      {showLibraryMatch && currentFood && (
-        <FoodLibraryMatchComponent
-          foodName={currentFood}
-          onSelect={handleLibrarySelect}
-          onDismiss={handleDismissMatch}
-          className="top-full left-0 right-0"
-        />
-      )}
+      {/* 渲染所有待匹配的食物项 */}
+      <div className="mt-2 space-y-2">
+        {pendingMatches
+          .filter(match => match.status === 'pending')
+          .map((pendingMatch, index) => (
+            <FoodLibraryMatchComponent
+              key={`${pendingMatch.startIndex}-${pendingMatch.endIndex}`}
+              foodName={pendingMatch.foodName}
+              onSelect={(match) => handleLibrarySelect(match, pendingMatch)}
+              onDismiss={() => handleDismissMatch(pendingMatch)}
+              className="relative"
+            />
+          ))}
+      </div>
 
       {/* 智能添加提示 */}
       {parseContext?.hasNutritionData && (
