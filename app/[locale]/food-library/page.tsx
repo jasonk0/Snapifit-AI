@@ -548,7 +548,7 @@ function FoodItemForm({
   };
 
   const handleNutritionChange = (key: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
+    const numValue = parseFloat(value);
     onChange({
       ...item,
       nutrition: { ...item.nutrition, [key]: numValue }
