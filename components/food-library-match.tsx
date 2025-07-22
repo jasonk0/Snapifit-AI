@@ -32,6 +32,7 @@ export function FoodLibraryMatchComponent({
 
   // 搜索匹配项
   useEffect(() => {
+    // 至少需要1个字符才开始搜索
     if (!foodName || foodName.length < 1) {
       setMatches([]);
       setVisible(false);
